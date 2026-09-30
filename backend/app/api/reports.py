@@ -7,13 +7,14 @@ from sqlalchemy import func, desc
 
 from app.database import get_db
 from app.models.models import Lead, Quotation, Survey, User, LeadSource, Company
-from app.api.deps import get_current_company
+from app.api.deps import get_current_company, require_permission
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
 @router.get("/{report_type}")
 def get_report_data(
     report_type: str,
+    current_user: User = Depends(require_permission("reports:view")),
     company: Company = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
@@ -96,10 +97,11 @@ def get_report_data(
 @router.get("/{report_type}/export")
 def export_report_csv(
     report_type: str,
+    current_user: User = Depends(require_permission("reports:export")),
     company: Company = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
-    data = get_report_data(report_type, company, db)
+    data = get_report_data(report_type, current_user, company, db)
     if not data:
         return Response(content="No data available", media_type="text/plain")
 

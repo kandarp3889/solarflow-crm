@@ -6,11 +6,15 @@ import {
   Users,
   Coins,
   ClipboardCheck,
-  Calendar
+  Calendar,
+  Lock
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 export const ReportsPage: React.FC = () => {
+  const { hasPermission } = useAuth();
+  const canExport = hasPermission('reports:export');
   const [reportType, setReportType] = useState<'leads' | 'sales' | 'quotations' | 'surveys'>('leads');
   const [reportData, setReportData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,13 +63,23 @@ export const ReportsPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 self-start sm:self-auto cursor-pointer"
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span>Export {reportType.toUpperCase()} (CSV)</span>
-        </button>
+        {canExport ? (
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 self-start sm:self-auto cursor-pointer transition-all"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export {reportType.toUpperCase()} (CSV)</span>
+          </button>
+        ) : (
+          <div 
+            title="Your role does not have the 'reports:export' permission" 
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-400 self-start sm:self-auto cursor-not-allowed"
+          >
+            <Lock className="w-3.5 h-3.5 text-slate-500" />
+            <span>Export Restricted</span>
+          </div>
+        )}
       </div>
 
       {/* Report Type Selector Tabs */}

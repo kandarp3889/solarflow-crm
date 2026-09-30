@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar as CalendarIcon } from 'lucide-react';
+import { X, UserPlus, Calendar as CalendarIcon } from 'lucide-react';
 import { api } from '../../services/api';
 
 interface AddLeadModalProps {
@@ -41,7 +41,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [executives, setExecutives] = useState<any[]>([]);
 
-  // Form State exactly matching the requested form
+  // Form State
   const [customerName, setCustomerName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [email, setEmail] = useState('');
@@ -72,17 +72,13 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
             setExecutives(team);
           } else {
             setExecutives([
-              { id: 3, full_name: 'Rohan Patel', role: 'sales_rep' },
-              { id: 2, full_name: 'Amit Shah', role: 'sales_manager' },
-              { id: 4, full_name: 'Vikram Desai', role: 'survey_engineer' }
+              { id: 1, full_name: 'Admin', role: 'company_admin' }
             ]);
           }
         })
         .catch(() => {
           setExecutives([
-            { id: 3, full_name: 'Rohan Patel', role: 'sales_rep' },
-            { id: 2, full_name: 'Amit Shah', role: 'sales_manager' },
-            { id: 4, full_name: 'Vikram Desai', role: 'survey_engineer' }
+            { id: 1, full_name: 'Admin', role: 'company_admin' }
           ]);
         });
     }
@@ -128,102 +124,117 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-fadeIn">
-      {/* Modal Container matching screenshot */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-sm animate-fadeIn">
+      {/* Modal Container with consistent dark theme styling */}
       <div 
-        className="w-full max-w-[500px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]"
+        className="w-full max-w-lg bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-3">
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight font-sans">
-            Add New Lead
-          </h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <UserPlus className="w-4 h-4" />
+            </span>
+            <div>
+              <h2 className="text-base font-bold text-white tracking-tight font-display">
+                Add New Solar Lead
+              </h2>
+              <p className="text-xs text-slate-400">
+                Capture prospective customer details & rooftop inquiry
+              </p>
+            </div>
+          </div>
           <button
             onClick={onClose}
             type="button"
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
             aria-label="Close"
           >
-            <X className="w-5 h-5 stroke-[2.5]" />
+            <X className="w-5 h-5 stroke-[2]" />
           </button>
         </div>
 
         {/* Modal Body Form */}
-        <form onSubmit={handleSubmit} className="px-6 py-2 overflow-y-auto space-y-4 flex-1">
+        <form onSubmit={handleSubmit} className="px-6 py-4 overflow-y-auto space-y-4 flex-1">
           {/* Customer Name */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Customer Name <span className="text-red-500 font-bold">*</span>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Customer Name <span className="text-red-400 font-bold">*</span>
             </label>
             <input
               type="text"
               required
+              placeholder="e.g. Rajesh Sharma"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-[#f8fafc] border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+              className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"
             />
           </div>
 
           {/* Mobile Number & Email */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Mobile Number <span className="text-red-500 font-bold">*</span>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Mobile Number <span className="text-red-400 font-bold">*</span>
               </label>
               <input
                 type="tel"
                 required
+                placeholder="+91 98765 43210"
                 value={mobileNumber}
                 onChange={(e) => setMobileNumber(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-[#f8fafc] border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Email
               </label>
               <input
                 type="email"
-                required
+                placeholder="customer@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-[#f8fafc] border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"
               />
             </div>
           </div>
 
           {/* Address */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
               Address
             </label>
             <input
               type="text"
+              placeholder="House/Plot no, street, locality"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-[#f8fafc] border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+              className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"
             />
           </div>
 
           {/* Monthly Bill Amount & Follow-up Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Monthly Bill Amount (₹)
               </label>
               <input
                 type="number"
                 min="0"
                 step="100"
+                placeholder="e.g. 4500"
                 value={monthlyBill}
                 onChange={(e) => setMonthlyBill(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-[#f8fafc] border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Follow-up Date <span className="text-red-500 font-bold">*</span>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>Follow-up Date</span>
+                <span className="text-red-400 font-bold">*</span>
               </label>
               <div className="relative">
                 <input
@@ -231,7 +242,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   required
                   value={followUpDate}
                   onChange={(e) => setFollowUpDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-[#f8fafc] border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                  className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer [color-scheme:dark]"
                 />
               </div>
             </div>
@@ -240,31 +251,32 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
           {/* State & City */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 State
               </label>
               <select
                 value={state}
                 onChange={(e) => setState(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-[#f8fafc] border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
               >
-                <option value="">Select State</option>
+                <option value="" className="bg-slate-900 text-slate-400">Select State</option>
                 {INDIAN_STATES.map((st) => (
-                  <option key={st} value={st}>
+                  <option key={st} value={st} className="bg-slate-900 text-white">
                     {st}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 City
               </label>
               <input
                 type="text"
+                placeholder="e.g. Surat"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-[#f8fafc] border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"
               />
             </div>
           </div>
@@ -272,36 +284,36 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
           {/* Roof Ownership & Roof Type */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Roof Ownership
               </label>
               <select
                 value={roofOwnership}
                 onChange={(e) => setRoofOwnership(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-[#f8fafc] border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
               >
-                <option value="">Select</option>
-                <option value="Owned">Owned</option>
-                <option value="Rented">Rented</option>
-                <option value="Leased">Leased</option>
-                <option value="Shared">Shared</option>
+                <option value="" className="bg-slate-900 text-slate-400">Select Ownership</option>
+                <option value="Owned" className="bg-slate-900 text-white">Owned</option>
+                <option value="Rented" className="bg-slate-900 text-white">Rented</option>
+                <option value="Leased" className="bg-slate-900 text-white">Leased</option>
+                <option value="Shared" className="bg-slate-900 text-white">Shared</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Roof Type
               </label>
               <select
                 value={roofType}
                 onChange={(e) => setRoofType(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-[#f8fafc] border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
               >
-                <option value="">Select</option>
-                <option value="Concrete Flat">Concrete Flat / RCC</option>
-                <option value="Metal Sheet">Metal Sheet / Tin Shed</option>
-                <option value="Tile">Tiled Roof / Slanted</option>
-                <option value="Asbestos Sheet">Asbestos Sheet</option>
-                <option value="Open Terrace">Open Terrace</option>
+                <option value="" className="bg-slate-900 text-slate-400">Select Roof Type</option>
+                <option value="Concrete Flat" className="bg-slate-900 text-white">Concrete Flat / RCC</option>
+                <option value="Metal Sheet" className="bg-slate-900 text-white">Metal Sheet / Tin Shed</option>
+                <option value="Tile" className="bg-slate-900 text-white">Tiled Roof / Slanted</option>
+                <option value="Asbestos Sheet" className="bg-slate-900 text-white">Asbestos Sheet</option>
+                <option value="Open Terrace" className="bg-slate-900 text-white">Open Terrace</option>
               </select>
             </div>
           </div>
@@ -309,36 +321,36 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
           {/* Lead Source & Assigned Executive */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Lead Source
               </label>
               <select
                 value={leadSource}
                 onChange={(e) => setLeadSource(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-[#f8fafc] border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
               >
-                <option value="">Select Source</option>
-                <option value="Website">Website</option>
-                <option value="WhatsApp">WhatsApp</option>
-                <option value="Google Ads">Google Ads</option>
-                <option value="Facebook Ads">Facebook Ads</option>
-                <option value="Referral">Referral</option>
-                <option value="Field Executive">Field Executive</option>
-                <option value="Direct Walk-in">Direct Walk-in</option>
+                <option value="" className="bg-slate-900 text-slate-400">Select Source</option>
+                <option value="Website" className="bg-slate-900 text-white">Website</option>
+                <option value="WhatsApp" className="bg-slate-900 text-white">WhatsApp</option>
+                <option value="Google Ads" className="bg-slate-900 text-white">Google Ads</option>
+                <option value="Facebook Ads" className="bg-slate-900 text-white">Facebook Ads</option>
+                <option value="Referral" className="bg-slate-900 text-white">Referral</option>
+                <option value="Field Executive" className="bg-slate-900 text-white">Field Executive</option>
+                <option value="Direct Walk-in" className="bg-slate-900 text-white">Direct Walk-in</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Assigned Executive
               </label>
               <select
                 value={assignedExecutive}
                 onChange={(e) => setAssignedExecutive(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm text-slate-800 bg-[#f8fafc] border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
               >
-                <option value="">Select Executive</option>
+                <option value="" className="bg-slate-900 text-slate-400">Select Executive</option>
                 {executives.map((exec) => (
-                  <option key={exec.id} value={exec.id}>
+                  <option key={exec.id} value={exec.id} className="bg-slate-900 text-white">
                     {exec.full_name} ({exec.role ? exec.role.replace('_', ' ') : 'Executive'})
                   </option>
                 ))}
@@ -346,19 +358,19 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons matching screenshot */}
-          <div className="flex items-center justify-end gap-3 pt-4 pb-2 border-t border-slate-100">
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-3 pt-4 pb-2 border-t border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2.5 text-sm font-semibold text-slate-700 bg-[#e2e8f0] hover:bg-[#cbd5e1] rounded-xl transition-all cursor-pointer"
+              className="px-5 py-2.5 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white border border-slate-700 rounded-xl transition-all cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2.5 text-sm font-semibold text-white bg-[#2563eb] hover:bg-[#1d4ed8] rounded-xl shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 cursor-pointer"
+              className="px-6 py-2.5 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 rounded-xl shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50 cursor-pointer"
             >
               {loading ? 'Saving...' : 'Save Lead'}
             </button>

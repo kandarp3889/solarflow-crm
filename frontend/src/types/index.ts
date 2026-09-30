@@ -134,6 +134,7 @@ export interface Lead {
   pincode?: string;
 
   property_type: string;
+  consumer_number?: string;
   roof_ownership?: string;
   monthly_bill: number;
   consumption_kwh: number;
@@ -142,7 +143,6 @@ export interface Lead {
   roof_type: string;
   roof_area_sqft: number;
   electricity_provider?: string;
-  consumer_number?: string;
   existing_solar: boolean;
   battery_required: boolean;
   battery_capacity_kwh: number;

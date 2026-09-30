@@ -127,6 +127,7 @@ class LeadBase(BaseModel):
     pincode: Optional[str] = None
 
     property_type: Optional[str] = "Residential"
+    consumer_number: Optional[str] = None
     roof_ownership: Optional[str] = "Owned"
     monthly_bill: Optional[float] = 0.0
     consumption_kwh: Optional[float] = 0.0
@@ -135,7 +136,6 @@ class LeadBase(BaseModel):
     roof_type: Optional[str] = "Concrete Flat"
     roof_area_sqft: Optional[float] = 0.0
     electricity_provider: Optional[str] = None
-    consumer_number: Optional[str] = None
     existing_solar: Optional[bool] = False
     battery_required: Optional[bool] = False
     battery_capacity_kwh: Optional[float] = 0.0
@@ -163,6 +163,8 @@ class LeadUpdate(BaseModel):
     pincode: Optional[str] = None
 
     property_type: Optional[str] = None
+    consumer_number: Optional[str] = None
+    roof_ownership: Optional[str] = None
     monthly_bill: Optional[float] = None
     consumption_kwh: Optional[float] = None
     recommended_kw: Optional[float] = None
@@ -170,7 +172,6 @@ class LeadUpdate(BaseModel):
     roof_type: Optional[str] = None
     roof_area_sqft: Optional[float] = None
     electricity_provider: Optional[str] = None
-    consumer_number: Optional[str] = None
     existing_solar: Optional[bool] = None
     battery_required: Optional[bool] = None
     battery_capacity_kwh: Optional[float] = None

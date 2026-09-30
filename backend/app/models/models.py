@@ -189,6 +189,7 @@ class Lead(Base):
 
     # Solar Requirements
     property_type = Column(String(50), default="Residential") # Residential, Commercial, Industrial, Agricultural
+    consumer_number = Column(String(100), nullable=True, index=True)
     roof_ownership = Column(String(50), default="Owned", nullable=True) # Owned, Rented, Leased, Shared
     monthly_bill = Column(Float, default=0.0) # In currency, e.g. INR ₹
     consumption_kwh = Column(Float, default=0.0) # Units per month
@@ -197,7 +198,6 @@ class Lead(Base):
     roof_type = Column(String(100), default="Concrete Flat") # Concrete Flat, Metal Sheet, Tile, Curved
     roof_area_sqft = Column(Float, default=0.0)
     electricity_provider = Column(String(100), nullable=True)
-    consumer_number = Column(String(100), nullable=True, index=True)
     existing_solar = Column(Boolean, default=False)
     battery_required = Column(Boolean, default=False)
     battery_capacity_kwh = Column(Float, default=0.0)

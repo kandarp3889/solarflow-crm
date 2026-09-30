@@ -18,12 +18,12 @@ def clean_database():
         try:
             print("Purging demo quotations, surveys, follow-ups, notes, activities, and leads...")
             if engine.dialect.name == "postgresql":
-                conn.execute(text("TRUNCATE TABLE quotations, surveys, follow_ups, lead_activities, lead_notes, notifications, audit_logs, leads RESTART IDENTITY CASCADE;"))
+                conn.execute(text("TRUNCATE TABLE quotations, surveys, followups, lead_activities, lead_notes, notifications, audit_logs, leads RESTART IDENTITY CASCADE;"))
                 conn.execute(text("DELETE FROM users WHERE email != 'admin@truesunenergy.in';"))
             else:
                 conn.execute(text("DELETE FROM quotations;"))
                 conn.execute(text("DELETE FROM surveys;"))
-                conn.execute(text("DELETE FROM follow_ups;"))
+                conn.execute(text("DELETE FROM followups;"))
                 conn.execute(text("DELETE FROM lead_activities;"))
                 conn.execute(text("DELETE FROM lead_notes;"))
                 conn.execute(text("DELETE FROM notifications;"))

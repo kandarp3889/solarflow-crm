@@ -15,12 +15,13 @@ import {
   Clock,
   Send,
   Sparkles,
-  Edit3,
+  Edit,
   Trash2
 } from 'lucide-react';
 import { Lead, LeadActivity, LeadNote } from '../../types';
 import { LeadScoreBadge } from './LeadScoreBadge';
 import { api } from '../../services/api';
+import { EditLeadModal } from './EditLeadModal';
 
 interface LeadDetailPageProps {
   leadId: number;
@@ -40,6 +41,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
   const [activeTab, setActiveTab] = useState<'timeline' | 'notes' | 'survey' | 'quotes'>('timeline');
   const [newNote, setNewNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const fetchLead = async () => {
     setLoading(true);
@@ -106,6 +108,14 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
         </button>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:bg-blue-500/30 transition-colors cursor-pointer"
+          >
+            <Edit className="w-3.5 h-3.5" />
+            <span>Edit Lead</span>
+          </button>
+
           <button
             onClick={() => onOpenAIForLead(lead.id)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30 transition-colors"
@@ -261,8 +271,16 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                 {lead.roof_type} ({lead.roof_area_sqft} sq.ft)
               </span>
             </div>
-            <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800">
-              <span className="text-slate-400 block text-[11px]">Consumer Number</span>
+            <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800 flex flex-col justify-between">
+              <span className="text-slate-400 block text-[11px] flex items-center justify-between">
+                <span>Consumer Number</span>
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold cursor-pointer underline"
+                >
+                  Edit
+                </button>
+              </span>
               <span className="font-mono font-bold text-amber-400 mt-0.5 block truncate">
                 {lead.consumer_number || 'Not recorded'}
               </span>
@@ -456,6 +474,19 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
           </div>
         )}
       </div>
+
+      {/* Edit Lead Modal */}
+      {isEditModalOpen && (
+        <EditLeadModal
+          isOpen={isEditModalOpen}
+          lead={lead}
+          onClose={() => setIsEditModalOpen(false)}
+          onSuccess={() => {
+            setIsEditModalOpen(false);
+            fetchLead();
+          }}
+        />
+      )}
     </div>
   );
 };

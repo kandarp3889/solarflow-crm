@@ -12,11 +12,13 @@ import {
   CheckSquare,
   Square,
   ArrowUpDown,
-  Sparkles
+  Sparkles,
+  Edit
 } from 'lucide-react';
 import { Lead } from '../../types';
 import { LeadScoreBadge } from './LeadScoreBadge';
 import { api } from '../../services/api';
+import { EditLeadModal } from './EditLeadModal';
 
 interface LeadsPageProps {
   onSelectLead: (id: number) => void;
@@ -32,6 +34,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
   // Filter states
   const [search, setSearch] = useState('');
@@ -322,6 +325,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                   </button>
                 </th>
                 <th className="py-3.5 px-3">Lead ID</th>
+                <th className="py-3.5 px-3">Consumer No</th>
                 <th className="py-3.5 px-3">Customer & Location</th>
                 <th className="py-3.5 px-3">Phone & Source</th>
                 <th className="py-3.5 px-3">System Size</th>
@@ -337,14 +341,14 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
               {loading ? (
                 [...Array(6)].map((_, i) => (
                   <tr key={i}>
-                    <td colSpan={11} className="py-4 px-4">
+                    <td colSpan={12} className="py-4 px-4">
                       <div className="h-6 rounded bg-slate-800/40 animate-pulse" />
                     </td>
                   </tr>
                 ))
               ) : leads.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-12 text-center text-slate-500">
+                  <td colSpan={12} className="py-12 text-center text-slate-500">
                     No solar leads matching your filters. Try clearing filters or adding a new lead.
                   </td>
                 </tr>
@@ -377,6 +381,22 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                         >
                           {l.lead_id}
                         </button>
+                      </td>
+
+                      <td className="py-3.5 px-3">
+                        {l.consumer_number ? (
+                          <span className="inline-flex items-center font-mono font-bold text-[11px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-400/25 whitespace-nowrap">
+                            {l.consumer_number}
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setEditingLead(l)}
+                            title="Click to add Consumer Number"
+                            className="inline-flex items-center text-[10px] text-slate-500 hover:text-amber-400 transition-colors cursor-pointer"
+                          >
+                            <span>— (Add)</span>
+                          </button>
+                        )}
                       </td>
 
                       <td className="py-3.5 px-3">
@@ -449,6 +469,13 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                             <MessageSquare className="w-4 h-4" />
                           </a>
                           <button
+                            onClick={() => setEditingLead(l)}
+                            title="Edit Lead Details"
+                            className="p-1 rounded-lg text-blue-400 hover:bg-blue-500/20 transition-colors cursor-pointer"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => onSelectLead(l.id)}
                             title="View Full CRM Details"
                             className="p-1 rounded-lg text-amber-400 hover:bg-amber-500/20 transition-colors"
@@ -478,6 +505,19 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
           <span>Sorted by newest captured</span>
         </div>
       </div>
+
+      {/* Edit Lead Modal */}
+      {editingLead && (
+        <EditLeadModal
+          isOpen={!!editingLead}
+          lead={editingLead}
+          onClose={() => setEditingLead(null)}
+          onSuccess={() => {
+            setEditingLead(null);
+            fetchLeads();
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -390,6 +390,11 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                           <span className="text-[11px] text-slate-400 truncate block">
                             {l.city || 'State Capital'} • {l.property_type}
                           </span>
+                          {l.consumer_number && (
+                            <span className="text-[10px] font-mono text-amber-400/90 truncate block mt-0.5">
+                              CA: {l.consumer_number}
+                            </span>
+                          )}
                         </div>
                       </td>
 

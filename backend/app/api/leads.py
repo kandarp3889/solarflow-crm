@@ -42,7 +42,8 @@ def get_leads(
                 Lead.phone.ilike(s),
                 Lead.email.ilike(s),
                 Lead.lead_id.ilike(s),
-                Lead.city.ilike(s)
+                Lead.city.ilike(s),
+                Lead.consumer_number.ilike(s)
             )
         )
     if stage:
@@ -345,14 +346,14 @@ def export_leads_csv(
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow([
-        "Lead ID", "Name", "Phone", "Email", "City", "State", "Property Type",
+        "Lead ID", "Name", "Phone", "Email", "Consumer Number", "City", "State", "Property Type",
         "Monthly Bill", "System Size (kW)", "Roof Type", "Roof Area (sqft)",
         "Source", "Stage", "Score", "Category", "Estimated Value", "Created Date"
     ])
 
     for l in leads:
         writer.writerow([
-            l.lead_id, l.full_name, l.phone, l.email or "", l.city or "", l.state or "",
+            l.lead_id, l.full_name, l.phone, l.email or "", l.consumer_number or "", l.city or "", l.state or "",
             l.property_type, l.monthly_bill, l.recommended_kw or l.interested_kw,
             l.roof_type, l.roof_area_sqft, l.lead_source, l.stage,
             l.lead_score, l.score_category, l.estimated_value, l.created_at.strftime("%Y-%m-%d")

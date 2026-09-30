@@ -262,9 +262,9 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
               </span>
             </div>
             <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800">
-              <span className="text-slate-400 block text-[11px]">DISCOM Provider</span>
-              <span className="font-bold text-slate-200 mt-0.5 block truncate">
-                {lead.electricity_provider || 'State Utility'}
+              <span className="text-slate-400 block text-[11px]">Consumer Number</span>
+              <span className="font-mono font-bold text-amber-400 mt-0.5 block truncate">
+                {lead.consumer_number || 'Not recorded'}
               </span>
             </div>
           </div>

@@ -27,6 +27,7 @@ def get_report_data(
                 "id": l.lead_id,
                 "name": l.full_name,
                 "phone": l.phone,
+                "consumer_number": l.consumer_number or "",
                 "city": l.city,
                 "system_size_kw": l.recommended_kw or l.interested_kw,
                 "bill": l.monthly_bill,

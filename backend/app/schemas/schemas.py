@@ -135,6 +135,7 @@ class LeadBase(BaseModel):
     roof_type: Optional[str] = "Concrete Flat"
     roof_area_sqft: Optional[float] = 0.0
     electricity_provider: Optional[str] = None
+    consumer_number: Optional[str] = None
     existing_solar: Optional[bool] = False
     battery_required: Optional[bool] = False
     battery_capacity_kwh: Optional[float] = 0.0
@@ -169,6 +170,7 @@ class LeadUpdate(BaseModel):
     roof_type: Optional[str] = None
     roof_area_sqft: Optional[float] = None
     electricity_provider: Optional[str] = None
+    consumer_number: Optional[str] = None
     existing_solar: Optional[bool] = None
     battery_required: Optional[bool] = None
     battery_capacity_kwh: Optional[float] = None

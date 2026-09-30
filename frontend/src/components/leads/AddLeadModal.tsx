@@ -45,6 +45,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [customerName, setCustomerName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [email, setEmail] = useState('');
+  const [consumerNumber, setConsumerNumber] = useState('');
   const [address, setAddress] = useState('');
   const [monthlyBill, setMonthlyBill] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
@@ -99,6 +100,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
         full_name: customerName.trim(),
         phone: mobileNumber.trim(),
         email: email.trim() || undefined,
+        consumer_number: consumerNumber.trim() || undefined,
         address: address.trim() || undefined,
         monthly_bill: billAmount,
         next_follow_up_date: followUpDate ? new Date(followUpDate).toISOString() : undefined,
@@ -201,22 +203,21 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
             </div>
           </div>
 
-          {/* Address */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Address
-            </label>
-            <input
-              type="text"
-              placeholder="House/Plot no, street, locality"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"
-            />
-          </div>
-
-          {/* Monthly Bill Amount & Follow-up Date */}
+          {/* Electricity Consumer Number & Monthly Bill Amount */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>Consumer Number</span>
+                <span className="text-[10px] text-slate-500 font-normal">Optional</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 1029384756 (CA / Meter No)"
+                value={consumerNumber}
+                onChange={(e) => setConsumerNumber(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"
+              />
+            </div>
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Monthly Bill Amount (₹)
@@ -228,6 +229,22 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 placeholder="e.g. 4500"
                 value={monthlyBill}
                 onChange={(e) => setMonthlyBill(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"
+              />
+            </div>
+          </div>
+
+          {/* Address & Follow-up Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Address
+              </label>
+              <input
+                type="text"
+                placeholder="House/Plot no, street, locality"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
                 className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"
               />
             </div>

@@ -142,6 +142,7 @@ export interface Lead {
   roof_type: string;
   roof_area_sqft: number;
   electricity_provider?: string;
+  consumer_number?: string;
   existing_solar: boolean;
   battery_required: boolean;
   battery_capacity_kwh: number;

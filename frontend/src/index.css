@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-truesun-green: #106828;
+  --color-truesun-green-light: #188334;
+  --color-truesun-green-dark: #0a461b;
+  --color-truesun-gold: #FEC426;
+  --color-truesun-gold-hover: #e5af1f;
+  --color-truesun-gold-dark: #cc970e;
+  --color-truesun-dark: #0b130e;
+  --color-truesun-card: #121e16;
+  --color-truesun-border: rgba(16, 104, 40, 0.2);
+}
+
+:root {
+  --font-sans: 'Plus Jakarta Sans', 'Roboto', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --truesun-green: #106828;
+  --truesun-gold: #FEC426;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #0a110c;
+  color: #f1f5f9;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+}
+
+/* Custom modern scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0d1710;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e3323;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2a4732;
+}
+
+/* Glassmorphism utility with True Sun brand tint */
+.glass-panel {
+  background: rgba(18, 30, 22, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(254, 196, 38, 0.12);
+}
+
+.glass-panel-hover:hover {
+  background: rgba(24, 40, 29, 0.9);
+  border-color: rgba(254, 196, 38, 0.35);
+  box-shadow: 0 4px 20px -2px rgba(16, 104, 40, 0.25);
+  transition: all 0.25s ease-in-out;
+}
+
+/* True Sun Gold & Green glow */
+.solar-glow {
+  box-shadow: 0 0 25px -4px rgba(254, 196, 38, 0.3);
+}
+
+.solar-glow-green {
+  box-shadow: 0 0 25px -4px rgba(16, 104, 40, 0.35);
+}
+
+.truesun-gradient-bg {
+  background: linear-gradient(135deg, rgba(16, 104, 40, 0.15) 0%, rgba(254, 196, 38, 0.1) 100%);
+}
+
+.truesun-badge {
+  background: linear-gradient(135deg, #106828 0%, #15803d 100%);
+  color: #ffffff;
+}
+
+.truesun-gold-btn {
+  background: linear-gradient(135deg, #FEC426 0%, #f59e0b 100%);
+  color: #0b130e;
+}
+
+/* Custom print style for Quotation PDF generation */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}

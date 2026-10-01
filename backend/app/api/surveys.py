@@ -8,6 +8,7 @@ from app.database import get_db
 from app.models.models import Survey, Lead, LeadActivity, User, Company, SurveyStatus, LeadStage
 from app.schemas.schemas import SurveyCreate, SurveyUpdate, SurveyResponse
 from app.api.deps import get_current_user, get_current_company
+from app.services.notification_service import notify_survey_progress
 
 router = APIRouter(prefix="/surveys", tags=["Site Surveys"])
 
@@ -82,6 +83,9 @@ def create_survey(
     db.commit()
     db.refresh(new_survey)
 
+    # Notify admins about scheduled survey
+    notify_survey_progress(db, company.id, lead, new_survey, "scheduled", current_user.full_name)
+
     res = SurveyResponse.from_orm(new_survey)
     res.lead_name = lead.full_name
     res.lead_phone = lead.phone
@@ -144,6 +148,11 @@ def update_survey(
 
     db.commit()
     db.refresh(s)
+
+    # Notify admins of survey update / completion
+    if s.lead:
+        action_name = "completed" if survey_in.status == SurveyStatus.COMPLETED.value else "updated"
+        notify_survey_progress(db, company.id, s.lead, s, action_name, current_user.full_name)
 
     res = SurveyResponse.from_orm(s)
     if s.lead:

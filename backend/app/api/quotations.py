@@ -11,6 +11,7 @@ from app.schemas.schemas import (
     QuotationCalculateRequest, QuotationCalculateResponse
 )
 from app.services.quotation_calc import calculate_solar_quotation
+from app.services.notification_service import notify_quotation_progress
 from app.api.deps import get_current_user, get_current_company
 
 router = APIRouter(prefix="/quotations", tags=["Solar Quotations"])
@@ -134,6 +135,15 @@ def create_quotation(
     db.commit()
     db.refresh(new_quote)
 
+    notify_quotation_progress(
+        db=db,
+        company_id=company.id,
+        lead=lead,
+        quotation=new_quote,
+        action_type="generated",
+        actor_name=current_user.full_name or current_user.email
+    )
+
     res = QuotationResponse.from_orm(new_quote)
     res.lead_name = lead.full_name
     res.lead_phone = lead.phone
@@ -166,6 +176,7 @@ def get_quotation_detail(
 def update_quotation(
     quotation_id: int,
     quote_in: QuotationUpdate,
+    current_user: User = Depends(get_current_user),
     company: Company = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
@@ -179,6 +190,16 @@ def update_quotation(
 
     db.commit()
     db.refresh(q)
+
+    if q.lead:
+        notify_quotation_progress(
+            db=db,
+            company_id=company.id,
+            lead=q.lead,
+            quotation=q,
+            action_type=f"updated (Status: {q.status})",
+            actor_name=current_user.full_name or current_user.email
+        )
 
     res = QuotationResponse.from_orm(q)
     if q.lead:
@@ -214,6 +235,16 @@ def send_quotation(
     )
     db.add(act)
     db.commit()
+
+    if q.lead:
+        notify_quotation_progress(
+            db=db,
+            company_id=company.id,
+            lead=q.lead,
+            quotation=q,
+            action_type=f"dispatched via {channel.title()}",
+            actor_name=current_user.full_name or current_user.email
+        )
 
     return {"message": f"Quotation dispatched via {channel}", "status": "sent"}
 

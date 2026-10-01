@@ -49,7 +49,16 @@ export const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     fetchNotifs();
     const interval = setInterval(fetchNotifs, 30000);
-    return () => clearInterval(interval);
+
+    const handleDataUpdate = () => {
+      fetchNotifs();
+    };
+    window.addEventListener('crm-data-updated', handleDataUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('crm-data-updated', handleDataUpdate);
+    };
   }, []);
 
   useEffect(() => {

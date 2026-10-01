@@ -55,6 +55,7 @@ const SolarCRMApp: React.FC = () => {
 
   // Global search input
   const [globalSearch, setGlobalSearch] = useState('');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   if (isLoading) {
     return (
@@ -83,7 +84,8 @@ const SolarCRMApp: React.FC = () => {
   };
 
   const handleQuickActionSuccess = () => {
-    // Re-render handled by individual queries
+    setRefreshTrigger(prev => prev + 1);
+    window.dispatchEvent(new CustomEvent('crm-data-updated'));
   };
 
   // Check RBAC permission for currentTab
@@ -174,6 +176,7 @@ const SolarCRMApp: React.FC = () => {
                   onSelectLead={handleSelectLead}
                   onOpenQuickAction={(action) => setQuickActionType(action)}
                   onOpenAIForLead={handleOpenAIForLead}
+                  refreshTrigger={refreshTrigger}
                 />
               )}
 

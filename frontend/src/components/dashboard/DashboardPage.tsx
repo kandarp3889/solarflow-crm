@@ -76,6 +76,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   useEffect(() => {
     fetchDashboard();
+
+    const handleDataUpdate = () => {
+      fetchDashboard();
+      fetchTrend();
+    };
+    window.addEventListener('crm-data-updated', handleDataUpdate);
+    return () => {
+      window.removeEventListener('crm-data-updated', handleDataUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -86,6 +95,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     try {
       await api.completeFollowup(id);
       setFollowups(followups.map(f => f.id === id ? { ...f, status: 'completed' } : f));
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
     } catch (e) {
       alert('Error updating follow-up');
     }

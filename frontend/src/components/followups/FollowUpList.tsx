@@ -42,12 +42,21 @@ export const FollowUpList: React.FC<FollowUpListProps> = ({
 
   useEffect(() => {
     fetchFollowups();
+
+    const handleDataUpdate = () => {
+      fetchFollowups();
+    };
+    window.addEventListener('crm-data-updated', handleDataUpdate);
+    return () => {
+      window.removeEventListener('crm-data-updated', handleDataUpdate);
+    };
   }, []);
 
   const handleComplete = async (id: number) => {
     try {
       await api.completeFollowup(id);
       fetchFollowups();
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
     } catch (e: any) {
       alert(e.message || 'Error completing follow-up');
     }
@@ -58,6 +67,7 @@ export const FollowUpList: React.FC<FollowUpListProps> = ({
     try {
       await api.deleteFollowup(id);
       setFollowups(followups.filter(f => f.id !== id));
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
     } catch (e: any) {
       alert(e.message || 'Error deleting follow-up');
     }

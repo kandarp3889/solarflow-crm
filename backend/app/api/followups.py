@@ -8,6 +8,7 @@ from app.database import get_db
 from app.models.models import FollowUp, Lead, LeadActivity, User, Company, FollowUpStatus
 from app.schemas.schemas import FollowUpCreate, FollowUpUpdate, FollowUpResponse
 from app.api.deps import get_current_user, get_current_company
+from app.services.notification_service import notify_followup_scheduled, notify_followup_completed
 
 router = APIRouter(prefix="/followups", tags=["Follow-ups"])
 
@@ -100,6 +101,9 @@ def create_followup(
     db.commit()
     db.refresh(new_followup)
 
+    # Notify admins about newly scheduled follow-up
+    notify_followup_scheduled(db, company.id, lead, new_followup, current_user.full_name)
+
     return FollowUpResponse(
         id=new_followup.id,
         company_id=new_followup.company_id,
@@ -142,6 +146,11 @@ def complete_followup(
     db.add(act)
 
     db.commit()
+
+    # Notify admins that follow-up has been completed
+    if f.lead:
+        notify_followup_completed(db, company.id, f.lead, f, current_user.full_name)
+
     return {"message": "Follow-up marked as completed"}
 
 @router.delete("/{followup_id}")

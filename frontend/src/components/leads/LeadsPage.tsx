@@ -25,12 +25,14 @@ interface LeadsPageProps {
   onSelectLead: (id: number) => void;
   onOpenQuickAction: (action: 'lead' | 'followup' | 'survey' | 'quotation') => void;
   onOpenAIForLead: (leadId: number) => void;
+  refreshTrigger?: number;
 }
 
 export const LeadsPage: React.FC<LeadsPageProps> = ({
   onSelectLead,
   onOpenQuickAction,
-  onOpenAIForLead
+  onOpenAIForLead,
+  refreshTrigger
 }) => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +88,16 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
     fetchLeads();
     fetchTeam();
     fetchPipelineStages();
+  }, [stageFilter, sourceFilter, scoreFilter, refreshTrigger]);
+
+  useEffect(() => {
+    const handleDataUpdate = () => {
+      fetchLeads();
+    };
+    window.addEventListener('crm-data-updated', handleDataUpdate);
+    return () => {
+      window.removeEventListener('crm-data-updated', handleDataUpdate);
+    };
   }, [stageFilter, sourceFilter, scoreFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -115,6 +127,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
       await api.bulkAssignLeads(selectedIds, bulkRepId);
       setSelectedIds([]);
       fetchLeads();
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
       alert(`Assigned ${selectedIds.length} leads successfully!`);
     } catch (e: any) {
       alert(e.message || 'Bulk assign failed');
@@ -127,6 +140,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
       await api.bulkUpdateStage(selectedIds, bulkStage);
       setSelectedIds([]);
       fetchLeads();
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
       alert(`Updated stage for ${selectedIds.length} leads successfully!`);
     } catch (e: any) {
       alert(e.message || 'Bulk status update failed');
@@ -152,6 +166,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
     try {
       await api.deleteLead(id);
       setLeads(leads.filter(l => l.id !== id));
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
     } catch (e: any) {
       alert(e.message || 'Failed to delete lead');
     }
@@ -556,6 +571,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
           onSuccess={() => {
             setEditingLead(null);
             fetchLeads();
+            window.dispatchEvent(new CustomEvent('crm-data-updated'));
           }}
         />
       )}

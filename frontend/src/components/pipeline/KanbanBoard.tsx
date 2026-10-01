@@ -54,12 +54,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   useEffect(() => {
     fetchStages();
+
+    const handleDataUpdate = () => {
+      fetchStages();
+    };
+    window.addEventListener('crm-data-updated', handleDataUpdate);
+    return () => {
+      window.removeEventListener('crm-data-updated', handleDataUpdate);
+    };
   }, []);
 
   const handleMoveCard = async (leadId: number, newStageKey: string) => {
     try {
       await api.movePipelineCard(leadId, newStageKey);
       fetchStages();
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
     } catch (e: any) {
       alert(e.message || 'Error moving card');
     }

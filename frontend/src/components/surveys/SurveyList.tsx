@@ -50,6 +50,14 @@ export const SurveyList: React.FC<SurveyListProps> = ({
 
   useEffect(() => {
     fetchSurveys();
+
+    const handleDataUpdate = () => {
+      fetchSurveys();
+    };
+    window.addEventListener('crm-data-updated', handleDataUpdate);
+    return () => {
+      window.removeEventListener('crm-data-updated', handleDataUpdate);
+    };
   }, [statusFilter]);
 
   const handleOpenEdit = (s: Survey) => {
@@ -76,6 +84,7 @@ export const SurveyList: React.FC<SurveyListProps> = ({
       await api.updateSurvey(selectedSurvey.id, editForm);
       setIsEditModalOpen(false);
       fetchSurveys();
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
       alert('Survey technical specifications updated!');
     } catch (e: any) {
       alert(e.message || 'Error updating survey');

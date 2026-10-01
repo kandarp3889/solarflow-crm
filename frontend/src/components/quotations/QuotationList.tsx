@@ -45,6 +45,14 @@ export const QuotationList: React.FC<QuotationListProps> = ({
 
   useEffect(() => {
     fetchQuotes();
+
+    const handleDataUpdate = () => {
+      fetchQuotes();
+    };
+    window.addEventListener('crm-data-updated', handleDataUpdate);
+    return () => {
+      window.removeEventListener('crm-data-updated', handleDataUpdate);
+    };
   }, []);
 
   const handlePrintProposal = (q: Quotation) => {
@@ -56,6 +64,7 @@ export const QuotationList: React.FC<QuotationListProps> = ({
     try {
       await api.sendQuotation(id, channel);
       fetchQuotes();
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
       alert(`Quotation proposal dispatched via ${channel.toUpperCase()}!`);
     } catch (e: any) {
       alert(e.message || 'Dispatch failed');
@@ -67,6 +76,7 @@ export const QuotationList: React.FC<QuotationListProps> = ({
     try {
       await api.deleteQuotation(id);
       setQuotations(quotations.filter(q => q.id !== id));
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
     } catch (e: any) {
       alert(e.message || 'Delete failed');
     }

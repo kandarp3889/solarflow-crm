@@ -67,6 +67,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
       await api.addLeadNote(leadId, newNote.trim());
       setNewNote('');
       fetchLead();
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
     } catch (e: any) {
       alert(e.message || 'Error saving note');
     } finally {
@@ -484,6 +485,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
           onSuccess={() => {
             setIsEditModalOpen(false);
             fetchLead();
+            window.dispatchEvent(new CustomEvent('crm-data-updated'));
           }}
         />
       )}

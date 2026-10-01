@@ -10,6 +10,7 @@ from app.models.models import Lead, LeadActivity, User, Company, PipelineStage
 from app.schemas.schemas import LeadResponse
 from app.api.deps import get_current_user, get_current_company
 from app.services.automation_engine import process_automation_event
+from app.services.notification_service import notify_stage_changed
 
 router = APIRouter(prefix="/pipeline", tags=["Pipeline"])
 
@@ -379,6 +380,17 @@ def move_pipeline_card(
 
     # Trigger automation
     process_automation_event("stage_changed", lead, db, company.id)
+
+    # Notify company admins of stage progress
+    notify_stage_changed(
+        db=db,
+        company_id=company.id,
+        lead=lead,
+        old_stage=old_label,
+        new_stage=new_label,
+        actor_name=current_user.full_name,
+        win_probability=lead.win_probability_pct
+    )
 
     res = LeadResponse.from_orm(lead)
     if lead.assigned_to:

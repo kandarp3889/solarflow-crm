@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Menu,
   Search,
@@ -203,7 +204,10 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Notifications Dropdown */}
         <div className="relative" ref={notifRef}>
           <button
-            onClick={() => setIsNotifOpen(!isNotifOpen)}
+            onClick={() => {
+              setIsNotifOpen(!isNotifOpen);
+              if (activeToast) setActiveToast(null);
+            }}
             className="relative p-2 text-slate-400 hover:text-white rounded-xl hover:bg-[#15271b] transition-colors cursor-pointer"
             title="Notifications"
           >
@@ -280,38 +284,68 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Real-time Notification Floating Alert Toast */}
-      {activeToast && (
-        <div 
-          onClick={() => {
-            setIsNotifOpen(true);
-            setActiveToast(null);
-          }}
-          className="fixed bottom-5 right-5 z-50 flex items-start gap-3 p-4 max-w-sm rounded-2xl bg-[#0d1711] border border-[#FEC426]/60 shadow-2xl shadow-black/80 backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-300 cursor-pointer hover:border-[#FEC426] transition-all"
+      {/* Real-time Notification Floating Alert Toast (Portalled outside header to prevent backdrop-blur containment) */}
+      {activeToast && typeof document !== 'undefined' && createPortal(
+        <aside
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 right-6 z-[99999] w-[calc(100%-3rem)] max-w-sm sm:w-96 select-none animate-in fade-in slide-in-from-bottom-5 duration-300 pointer-events-auto"
         >
-          <div className="p-2 rounded-xl bg-[#FEC426]/10 text-[#FEC426] shrink-0 mt-0.5">
-            <Bell className="w-5 h-5 animate-bounce" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#FEC426] bg-[#FEC426]/10 px-1.5 py-0.5 rounded">
-                Live Notification
+          <div
+            onClick={() => {
+              setIsNotifOpen(true);
+              setActiveToast(null);
+            }}
+            className="group relative flex items-start gap-3.5 p-4 rounded-2xl bg-[#0c1610]/95 border border-[#FEC426]/60 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_25px_rgba(254,196,38,0.2)] backdrop-blur-xl cursor-pointer hover:border-[#FEC426] transition-all duration-200 hover:scale-[1.01]"
+          >
+            {/* Pulsing Notification Bell Icon */}
+            <div className="relative p-2.5 rounded-xl bg-gradient-to-br from-[#FEC426]/20 to-[#106828]/25 border border-[#FEC426]/30 text-[#FEC426] shrink-0 mt-0.5 shadow-inner">
+              <Bell className="w-5 h-5 animate-[bounce_2s_infinite]" />
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FEC426] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#FEC426]"></span>
               </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveToast(null);
-                }}
-                className="text-slate-400 hover:text-white p-0.5 rounded-md hover:bg-[#15271b]"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
             </div>
-            <p className="text-xs font-bold text-white mt-1 line-clamp-1">{activeToast.title}</p>
-            <p className="text-[11px] text-slate-300 mt-0.5 line-clamp-2">{activeToast.message}</p>
-            <span className="text-[9px] text-slate-400 font-mono mt-1 block">Just now • Click to open</span>
+
+            {/* Notification Content */}
+            <div className="flex-1 min-w-0 pr-4">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#FEC426]/15 text-[#FEC426] border border-[#FEC426]/30">
+                  Live Alert
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">Just now</span>
+              </div>
+              <p className="text-xs font-bold text-white mt-1.5 truncate group-hover:text-[#FEC426] transition-colors">
+                {activeToast.title}
+              </p>
+              <p className="text-[11px] text-slate-300 mt-0.5 line-clamp-2 leading-relaxed">
+                {activeToast.message}
+              </p>
+              <div className="flex items-center gap-1 mt-2 text-[10px] font-semibold text-emerald-400 group-hover:translate-x-0.5 transition-transform">
+                <span>View notification</span>
+                <span>&rarr;</span>
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveToast(null);
+              }}
+              className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#15271b] transition-colors"
+              title="Close notification"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Bottom Accent Line */}
+            <div className="absolute bottom-0 left-3 right-3 h-0.5 bg-[#1e3423] rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-[#106828] to-[#FEC426] animate-[pulse_1.5s_infinite]" />
+            </div>
           </div>
-        </div>
+        </aside>,
+        document.body
       )}
     </header>
   );

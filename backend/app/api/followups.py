@@ -101,8 +101,8 @@ def create_followup(
     db.commit()
     db.refresh(new_followup)
 
-    # Notify admins about newly scheduled follow-up
-    notify_followup_scheduled(db, company.id, lead, new_followup, current_user.full_name)
+    # Send targeted notification about newly scheduled follow-up
+    notify_followup_scheduled(db, company.id, lead, new_followup, current_user)
 
     return FollowUpResponse(
         id=new_followup.id,
@@ -147,9 +147,9 @@ def complete_followup(
 
     db.commit()
 
-    # Notify admins that follow-up has been completed
+    # Send targeted notification that follow-up has been completed
     if f.lead:
-        notify_followup_completed(db, company.id, f.lead, f, current_user.full_name)
+        notify_followup_completed(db, company.id, f.lead, f, current_user)
 
     return {"message": "Follow-up marked as completed"}
 

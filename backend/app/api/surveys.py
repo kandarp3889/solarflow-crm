@@ -83,8 +83,8 @@ def create_survey(
     db.commit()
     db.refresh(new_survey)
 
-    # Notify admins about scheduled survey
-    notify_survey_progress(db, company.id, lead, new_survey, "scheduled", current_user.full_name)
+    # Send targeted notification about scheduled survey
+    notify_survey_progress(db, company.id, lead, new_survey, "scheduled", current_user)
 
     res = SurveyResponse.from_orm(new_survey)
     res.lead_name = lead.full_name
@@ -149,10 +149,10 @@ def update_survey(
     db.commit()
     db.refresh(s)
 
-    # Notify admins of survey update / completion
+    # Send targeted notification of survey update / completion
     if s.lead:
         action_name = "completed" if survey_in.status == SurveyStatus.COMPLETED.value else "updated"
-        notify_survey_progress(db, company.id, s.lead, s, action_name, current_user.full_name)
+        notify_survey_progress(db, company.id, s.lead, s, action_name, current_user)
 
     res = SurveyResponse.from_orm(s)
     if s.lead:

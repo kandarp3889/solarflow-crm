@@ -141,7 +141,7 @@ def create_quotation(
         lead=lead,
         quotation=new_quote,
         action_type="generated",
-        actor_name=current_user.full_name or current_user.email
+        actor=current_user
     )
 
     res = QuotationResponse.from_orm(new_quote)
@@ -198,7 +198,7 @@ def update_quotation(
             lead=q.lead,
             quotation=q,
             action_type=f"updated (Status: {q.status})",
-            actor_name=current_user.full_name or current_user.email
+            actor=current_user
         )
 
     res = QuotationResponse.from_orm(q)
@@ -243,7 +243,7 @@ def send_quotation(
             lead=q.lead,
             quotation=q,
             action_type=f"dispatched via {channel.title()}",
-            actor_name=current_user.full_name or current_user.email
+            actor=current_user
         )
 
     return {"message": f"Quotation dispatched via {channel}", "status": "sent"}

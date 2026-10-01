@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.database import SessionLocal
 from app.models.models import User, Company, Notification, Lead
+from app.security import create_access_token, get_password_hash
 
 client = TestClient(app)
 
@@ -12,30 +13,36 @@ def test_admin_notifications_flow():
     try:
         # Find an admin user to login as
         admin = db.query(User).filter(User.role == 'company_admin', User.is_active == True).first()
+        admin = db.query(User).filter(User.role == 'company_admin', User.is_active == True).first()
         if not admin:
             admin = db.query(User).filter(User.role == 'super_admin', User.is_active == True).first()
         assert admin is not None, "No active admin found"
         print(f"Testing with admin: {admin.email} (ID: {admin.id}, Role: {admin.role})")
 
-        # 1. Login
-        login_res = client.post("/api/auth/login", data={"username": admin.email, "password": "password123"})
-        if login_res.status_code != 200:
-            login_res = client.post("/api/auth/login", data={"username": admin.email, "password": "adminpassword"})
-        
-        # If password didn't match default, generate token directly for test
-        headers = {}
-        if login_res.status_code == 200:
-            token = login_res.json()["access_token"]
-            headers = {"Authorization": f"Bearer {token}"}
-            print("Logged in successfully via /api/auth/login")
-        else:
-            from app.security import create_access_token
-            token = create_access_token(data={"sub": str(admin.id), "company_id": admin.company_id})
-            headers = {"Authorization": f"Bearer {token}"}
-            print("Generated auth token directly")
+        rep = db.query(User).filter(User.role == 'sales_rep', User.is_active == True).first()
+        if not rep:
+            rep = User(
+                company_id=admin.company_id,
+                email="rep_test@truesunenergy.in",
+                full_name="Rajesh Sharma",
+                hashed_password=get_password_hash("password123"),
+                role="sales_rep",
+                is_active=True
+            )
+            db.add(rep)
+            db.commit()
+            db.refresh(rep)
+
+        admin_token = create_access_token(data={"sub": str(admin.id), "company_id": admin.company_id})
+        admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+        rep_token = create_access_token(data={"sub": str(rep.id), "company_id": rep.company_id})
+        rep_headers = {"Authorization": f"Bearer {rep_token}"}
+
+        headers = rep_headers
 
         # Initial notification count
-        notifs_res = client.get("/api/notifications", headers=headers)
+        notifs_res = client.get("/api/notifications", headers=admin_headers)
         assert notifs_res.status_code == 200, f"Failed to get notifications: {notifs_res.text}"
         initial_count = len(notifs_res.json())
         print(f"Initial notifications count: {initial_count}")
@@ -63,7 +70,7 @@ def test_admin_notifications_flow():
         print(f"Lead created successfully with ID: {lead_id} ({created_lead['lead_id']})")
 
         # Check notifications after lead creation
-        notifs_res = client.get("/api/notifications", headers=headers)
+        notifs_res = client.get("/api/notifications", headers=admin_headers)
         notifs = notifs_res.json()
         print(f"Notifications after lead creation: {len(notifs)}")
         assert len(notifs) > initial_count, "No new notification received after lead creation"
@@ -77,7 +84,7 @@ def test_admin_notifications_flow():
         print("Note added successfully")
 
         # Check note notification
-        notifs_res = client.get("/api/notifications", headers=headers)
+        notifs_res = client.get("/api/notifications", headers=admin_headers)
         latest_notif = notifs_res.json()[0]
         print(f"Latest notification after note: '{latest_notif['title']}' - {latest_notif['message']}")
         assert "Note Added" in latest_notif["title"]
@@ -88,10 +95,10 @@ def test_admin_notifications_flow():
         print("Pipeline card moved to survey_scheduled")
 
         # Check stage change notification
-        notifs_res = client.get("/api/notifications", headers=headers)
+        notifs_res = client.get("/api/notifications", headers=admin_headers)
         latest_notif = notifs_res.json()[0]
         print(f"Latest notification after stage advance: '{latest_notif['title']}' - {latest_notif['message']}")
-        assert "Stage Advanced" in latest_notif["title"] or "survey_scheduled" in latest_notif["title"]
+        assert "Lead Stage" in latest_notif["title"] or "Stage Advanced" in latest_notif["title"] or "survey_scheduled" in latest_notif["title"]
 
         # 5. Schedule Follow-up
         fu_res = client.post("/api/followups", json={
@@ -103,7 +110,7 @@ def test_admin_notifications_flow():
         assert fu_res.status_code == 200, f"Failed to create followup: {fu_res.text}"
         print("Followup created")
 
-        notifs_res = client.get("/api/notifications", headers=headers)
+        notifs_res = client.get("/api/notifications", headers=admin_headers)
         latest_notif = notifs_res.json()[0]
         print(f"Latest notification after followup: '{latest_notif['title']}' - {latest_notif['message']}")
         assert "Follow-up Scheduled" in latest_notif["title"]
@@ -120,7 +127,7 @@ def test_admin_notifications_flow():
         assert survey_res.status_code == 200, f"Failed to create survey: {survey_res.text}"
         print("Survey created")
 
-        notifs_res = client.get("/api/notifications", headers=headers)
+        notifs_res = client.get("/api/notifications", headers=admin_headers)
         latest_notif = notifs_res.json()[0]
         print(f"Latest notification after survey: '{latest_notif['title']}' - {latest_notif['message']}")
         assert "Survey" in latest_notif["title"]
@@ -142,7 +149,7 @@ def test_admin_notifications_flow():
         quote_id = quote_res.json()["id"]
         print(f"Quotation created with ID: {quote_id}")
 
-        notifs_res = client.get("/api/notifications", headers=headers)
+        notifs_res = client.get("/api/notifications", headers=admin_headers)
         latest_notif = notifs_res.json()[0]
         print(f"Latest notification after quotation: '{latest_notif['title']}' - {latest_notif['message']}")
         assert "Quotation" in latest_notif["title"]
@@ -152,7 +159,7 @@ def test_admin_notifications_flow():
         assert send_res.status_code == 200, f"Failed to send quotation: {send_res.text}"
         print("Quotation dispatched via WhatsApp")
 
-        notifs_res = client.get("/api/notifications", headers=headers)
+        notifs_res = client.get("/api/notifications", headers=admin_headers)
         latest_notif = notifs_res.json()[0]
         print(f"Latest notification after quotation dispatch: '{latest_notif['title']}' - {latest_notif['message']}")
         assert "dispatched via Whatsapp" in latest_notif["message"]

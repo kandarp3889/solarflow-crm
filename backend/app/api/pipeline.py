@@ -381,14 +381,14 @@ def move_pipeline_card(
     # Trigger automation
     process_automation_event("stage_changed", lead, db, company.id)
 
-    # Notify company admins of stage progress
+    # Send targeted notification of stage progress
     notify_stage_changed(
         db=db,
         company_id=company.id,
         lead=lead,
         old_stage=old_label,
         new_stage=new_label,
-        actor_name=current_user.full_name,
+        actor=current_user,
         win_probability=lead.win_probability_pct
     )
 

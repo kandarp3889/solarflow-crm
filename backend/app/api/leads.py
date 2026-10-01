@@ -15,7 +15,10 @@ from app.schemas.schemas import (
 )
 from app.services.lead_scoring import calculate_lead_score
 from app.services.automation_engine import process_automation_event
-from app.services.notification_service import notify_lead_created, notify_lead_updated, notify_lead_note_added, notify_stage_changed
+from app.services.notification_service import (
+    notify_lead_created, notify_lead_updated, notify_lead_note_added,
+    notify_stage_changed, notify_lead_assigned, dispatch_targeted_notification
+)
 from app.api.deps import get_current_user, get_current_company
 
 router = APIRouter(prefix="/leads", tags=["Leads"])
@@ -139,8 +142,8 @@ def create_lead(
     # Trigger automation workflows
     process_automation_event("lead_created", new_lead, db, company.id)
 
-    # Send admin notification about newly captured solar lead
-    notify_lead_created(db, company.id, new_lead, current_user.full_name)
+    # Send targeted notification about newly captured solar lead
+    notify_lead_created(db, company.id, new_lead, current_user)
 
     res = LeadResponse.from_orm(new_lead)
     if new_lead.assigned_to:
@@ -228,11 +231,15 @@ def update_lead(
     db.commit()
     db.refresh(lead)
 
-    # Send admin notification on lead progress/update
+    # If lead was newly assigned or reassigned, notify the assigned user
+    if lead_in.assigned_to_id and lead_in.assigned_to_id != old_assigned:
+        notify_lead_assigned(db, company.id, lead, lead.assigned_to_id, current_user)
+
+    # Send targeted notification on lead progress/update
     if lead_in.stage and lead_in.stage != old_stage:
-        notify_stage_changed(db, company.id, lead, old_stage, lead.stage, current_user.full_name, lead.win_probability_pct)
+        notify_stage_changed(db, company.id, lead, old_stage, lead.stage, current_user, lead.win_probability_pct)
     else:
-        notify_lead_updated(db, company.id, lead, current_user.full_name, "Updated customer details & status")
+        notify_lead_updated(db, company.id, lead, current_user, "Updated customer details & status")
 
     res = LeadResponse.from_orm(lead)
     if lead.assigned_to:
@@ -286,8 +293,8 @@ def add_lead_note(
     db.commit()
     db.refresh(new_note)
 
-    # Notify admins of new note on lead
-    notify_lead_note_added(db, company.id, lead, note_in.content, current_user.full_name)
+    # Send targeted notification of new note on lead
+    notify_lead_note_added(db, company.id, lead, note_in.content, current_user)
 
     res = LeadNoteResponse.from_orm(new_note)
     res.user_name = current_user.full_name
@@ -321,6 +328,19 @@ def bulk_assign_leads(
         db.add(act)
 
     db.commit()
+
+    # Dispatch targeted notification to assigned representative
+    dispatch_targeted_notification(
+        db=db,
+        company_id=company.id,
+        actor=current_user,
+        assigned_user_id=req.assigned_to_id,
+        title=f"Leads Assigned: {len(req.lead_ids)} Leads",
+        message=f"{current_user.full_name or 'Admin'} assigned {len(req.lead_ids)} solar rooftop leads to you.",
+        category="lead",
+        link_url="/leads"
+    )
+
     return {"message": f"Successfully assigned {len(req.lead_ids)} leads to {rep.full_name}"}
 
 @router.post("/bulk-status")

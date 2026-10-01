@@ -19,6 +19,7 @@ import { Lead } from '../../types';
 import { LeadScoreBadge } from './LeadScoreBadge';
 import { api } from '../../services/api';
 import { EditLeadModal } from './EditLeadModal';
+import { getStageColorConfig } from '../pipeline/PipelineStagesModal';
 
 interface LeadsPageProps {
   onSelectLead: (id: number) => void;
@@ -46,6 +47,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
   const [bulkRepId, setBulkRepId] = useState<number>(3);
   const [bulkStage, setBulkStage] = useState('qualified');
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [pipelineStages, setPipelineStages] = useState<any[]>([]);
 
   const fetchLeads = async () => {
     setLoading(true);
@@ -71,9 +73,19 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
     } catch (e) {}
   };
 
+  const fetchPipelineStages = async () => {
+    try {
+      const data = await api.getPipelineStageConfig();
+      if (Array.isArray(data) && data.length > 0) {
+        setPipelineStages(data);
+      }
+    } catch (e) {}
+  };
+
   useEffect(() => {
     fetchLeads();
     fetchTeam();
+    fetchPipelineStages();
   }, [stageFilter, sourceFilter, scoreFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -208,15 +220,25 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
               className="px-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-amber-500 cursor-pointer"
             >
               <option value="">All Stages</option>
-              <option value="new_lead">New Lead</option>
-              <option value="contacted">Contacted</option>
-              <option value="qualified">Qualified</option>
-              <option value="survey_scheduled">Survey Scheduled</option>
-              <option value="survey_completed">Survey Completed</option>
-              <option value="quotation_sent">Quotation Sent</option>
-              <option value="negotiation">Negotiation</option>
-              <option value="won">Won Deals</option>
-              <option value="lost">Lost</option>
+              {pipelineStages.length > 0 ? (
+                pipelineStages.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="new_lead">New Lead</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="qualified">Qualified</option>
+                  <option value="survey_scheduled">Survey Scheduled</option>
+                  <option value="survey_completed">Survey Completed</option>
+                  <option value="quotation_sent">Quotation Sent</option>
+                  <option value="negotiation">Negotiation</option>
+                  <option value="won">Won Deals</option>
+                  <option value="lost">Lost</option>
+                </>
+              )}
             </select>
 
             {/* Source Filter */}
@@ -290,12 +312,22 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                   onChange={(e) => setBulkStage(e.target.value)}
                   className="px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded-lg text-slate-200"
                 >
-                  <option value="contacted">Contacted</option>
-                  <option value="qualified">Qualified</option>
-                  <option value="survey_scheduled">Survey Scheduled</option>
-                  <option value="quotation_sent">Quotation Sent</option>
-                  <option value="won">Mark Won</option>
-                  <option value="lost">Mark Lost</option>
+                  {pipelineStages.length > 0 ? (
+                    pipelineStages.map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.label}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="contacted">Contacted</option>
+                      <option value="qualified">Qualified</option>
+                      <option value="survey_scheduled">Survey Scheduled</option>
+                      <option value="quotation_sent">Quotation Sent</option>
+                      <option value="won">Mark Won</option>
+                      <option value="lost">Mark Lost</option>
+                    </>
+                  )}
                 </select>
                 <button
                   onClick={handleBulkStatus}
@@ -441,9 +473,18 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                       </td>
 
                       <td className="py-3.5 px-3">
-                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border capitalize whitespace-nowrap ${stageClass}`}>
-                          {l.stage.replace('_', ' ')}
-                        </span>
+                        {(() => {
+                          const stageObj = pipelineStages.find((s) => s.key === l.stage);
+                          const stageLabel = stageObj ? stageObj.label : l.stage.replace('_', ' ');
+                          const badgeClass = stageObj
+                            ? getStageColorConfig(stageObj.color).badge
+                            : (stageBadges[l.stage] || 'bg-slate-800 text-slate-300 border-slate-700');
+                          return (
+                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border capitalize whitespace-nowrap ${badgeClass}`}>
+                              {stageLabel}
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       <td className="py-3.5 px-3">

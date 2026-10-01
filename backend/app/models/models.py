@@ -62,7 +62,7 @@ class QuotationStatus(str, enum.Enum):
 DEFAULT_ROLE_PERMISSIONS = {
     "company_admin": [
         "leads:view", "leads:create", "leads:edit", "leads:delete", "leads:export", "leads:assign",
-        "pipeline:view", "pipeline:move", "pipeline:close_deals",
+        "pipeline:view", "pipeline:move", "pipeline:close_deals", "pipeline:manage_stages",
         "surveys:view", "surveys:create", "surveys:complete", "surveys:delete",
         "quotations:view", "quotations:create", "quotations:discount", "quotations:delete",
         "followups:view", "followups:manage",
@@ -74,7 +74,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     ],
     "sales_manager": [
         "leads:view", "leads:create", "leads:edit", "leads:export", "leads:assign",
-        "pipeline:view", "pipeline:move", "pipeline:close_deals",
+        "pipeline:view", "pipeline:move", "pipeline:close_deals", "pipeline:manage_stages",
         "surveys:view", "surveys:create",
         "quotations:view", "quotations:create", "quotations:discount",
         "followups:view", "followups:manage",
@@ -145,6 +145,7 @@ class Company(Base):
     leads = relationship("Lead", back_populates="company", cascade="all, delete-orphan")
     quotations = relationship("Quotation", back_populates="company", cascade="all, delete-orphan")
     surveys = relationship("Survey", back_populates="company", cascade="all, delete-orphan")
+    pipeline_stages = relationship("PipelineStage", back_populates="company", cascade="all, delete-orphan", order_by="PipelineStage.order_index")
 
 # -------------------------------------------------------------
 # User (Multi-Tenant)
@@ -367,6 +368,25 @@ class Quotation(Base):
     lead = relationship("Lead", back_populates="quotations")
     created_by = relationship("User")
     company = relationship("Company", back_populates="quotations")
+
+# -------------------------------------------------------------
+# Dynamic Pipeline Stages (Multi-Tenant Kanban)
+# -------------------------------------------------------------
+class PipelineStage(Base):
+    __tablename__ = "pipeline_stages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    key = Column(String(50), nullable=False, index=True) # e.g. 'new_lead', 'contacted', 'custom_stage'
+    label = Column(String(100), nullable=False) # e.g. "Site Feasibility"
+    color = Column(String(50), default="blue") # e.g. "blue", "indigo", "amber", "purple", "cyan", "orange", "pink", "emerald", "red", "teal", "violet", "slate"
+    order_index = Column(Integer, default=0, nullable=False)
+    win_probability_pct = Column(Integer, default=50) # 0 to 100
+    is_won = Column(Boolean, default=False)
+    is_lost = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    company = relationship("Company", back_populates="pipeline_stages")
 
 # -------------------------------------------------------------
 # Lead Source Analytics

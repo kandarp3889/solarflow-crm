@@ -43,6 +43,7 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [executives, setExecutives] = useState<any[]>([]);
+  const [availableStages, setAvailableStages] = useState<any[]>([]);
 
   // Form State
   const [customerName, setCustomerName] = useState('');
@@ -96,22 +97,31 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
         setFollowUpDate('');
       }
 
-      // Fetch team executives
-      api.getTeam()
-        .then((team: any[]) => {
-          if (Array.isArray(team) && team.length > 0) {
-            setExecutives(team);
-          } else {
+        // Fetch team executives
+        api.getTeam()
+          .then((team: any[]) => {
+            if (Array.isArray(team) && team.length > 0) {
+              setExecutives(team);
+            } else {
+              setExecutives([
+                { id: 1, full_name: 'Admin', role: 'company_admin' }
+              ]);
+            }
+          })
+          .catch(() => {
             setExecutives([
               { id: 1, full_name: 'Admin', role: 'company_admin' }
             ]);
-          }
-        })
-        .catch(() => {
-          setExecutives([
-            { id: 1, full_name: 'Admin', role: 'company_admin' }
-          ]);
-        });
+          });
+
+        // Fetch dynamic company pipeline stages
+        api.getPipelineStageConfig()
+          .then((stagesData: any[]) => {
+            if (Array.isArray(stagesData) && stagesData.length > 0) {
+              setAvailableStages(stagesData);
+            }
+          })
+          .catch(() => {});
     }
   }, [isOpen, lead]);
 
@@ -407,15 +417,25 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
                 onChange={(e) => setStage(e.target.value)}
                 className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer capitalize"
               >
-                <option value="new_lead" className="bg-slate-900 text-white">New Lead</option>
-                <option value="contacted" className="bg-slate-900 text-white">Contacted</option>
-                <option value="qualified" className="bg-slate-900 text-white">Qualified</option>
-                <option value="survey_scheduled" className="bg-slate-900 text-white">Survey Scheduled</option>
-                <option value="survey_completed" className="bg-slate-900 text-white">Survey Completed</option>
-                <option value="quotation_sent" className="bg-slate-900 text-white">Quotation Sent</option>
-                <option value="negotiation" className="bg-slate-900 text-white">Negotiation</option>
-                <option value="won" className="bg-slate-900 text-emerald-400">Won (Contract Signed)</option>
-                <option value="lost" className="bg-slate-900 text-red-400">Lost</option>
+                {availableStages.length > 0 ? (
+                  availableStages.map((s) => (
+                    <option key={s.key} value={s.key} className="bg-slate-900 text-white">
+                      {s.label}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="new_lead" className="bg-slate-900 text-white">New Lead</option>
+                    <option value="contacted" className="bg-slate-900 text-white">Contacted</option>
+                    <option value="qualified" className="bg-slate-900 text-white">Qualified</option>
+                    <option value="survey_scheduled" className="bg-slate-900 text-white">Survey Scheduled</option>
+                    <option value="survey_completed" className="bg-slate-900 text-white">Survey Completed</option>
+                    <option value="quotation_sent" className="bg-slate-900 text-white">Quotation Sent</option>
+                    <option value="negotiation" className="bg-slate-900 text-white">Negotiation</option>
+                    <option value="won" className="bg-slate-900 text-emerald-400">Won (Contract Signed)</option>
+                    <option value="lost" className="bg-slate-900 text-red-400">Lost</option>
+                  </>
+                )}
               </select>
             </div>
             <div>

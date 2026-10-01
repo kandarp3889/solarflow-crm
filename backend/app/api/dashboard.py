@@ -7,7 +7,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app.models.models import (
     Lead, Survey, Quotation, User, Company,
-    LeadStage, SurveyStatus, QuotationStatus
+    LeadStage, SurveyStatus, QuotationStatus, PipelineStage
 )
 from app.schemas.schemas import (
     DashboardStatsResponse, KpiCard, LeadTrendItem,
@@ -212,15 +212,19 @@ def get_pipeline_funnel(
     db: Session = Depends(get_db)
 ):
     cid = company.id
-    stages_order = [
-        ("new_lead", "New Lead"),
-        ("contacted", "Contacted"),
-        ("qualified", "Qualified"),
-        ("survey_scheduled", "Site Survey"),
-        ("quotation_sent", "Quotation"),
-        ("negotiation", "Negotiation"),
-        ("won", "Won")
-    ]
+    db_stages = db.query(PipelineStage).filter(PipelineStage.company_id == cid).order_by(PipelineStage.order_index).all()
+    if db_stages:
+        stages_order = [(s.key, s.label) for s in db_stages if not s.is_lost]
+    else:
+        stages_order = [
+            ("new_lead", "New Lead"),
+            ("contacted", "Contacted"),
+            ("qualified", "Qualified"),
+            ("survey_scheduled", "Site Survey"),
+            ("quotation_sent", "Quotation"),
+            ("negotiation", "Negotiation"),
+            ("won", "Won")
+        ]
 
     total_leads = db.query(Lead).filter(Lead.company_id == cid).count() or 1
     funnel = []

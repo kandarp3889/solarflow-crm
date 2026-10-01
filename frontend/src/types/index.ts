@@ -96,7 +96,43 @@ export type LeadStage =
   | 'quotation_sent' 
   | 'negotiation' 
   | 'won' 
-  | 'lost';
+  | 'lost'
+  | string;
+
+export interface PipelineStageConfig {
+  id: string;
+  stage_id: number;
+  key: string;
+  label: string;
+  color: string;
+  order_index: number;
+  win_probability_pct: number;
+  is_won: boolean;
+  is_lost: boolean;
+  count?: number;
+  total_value?: number;
+  leads?: Lead[];
+}
+
+export interface PipelineStageCreatePayload {
+  label: string;
+  key?: string;
+  color?: string;
+  win_probability_pct?: number;
+  is_won?: boolean;
+  is_lost?: boolean;
+  order_index?: number;
+}
+
+export interface PipelineStageUpdatePayload {
+  label?: string;
+  key?: string;
+  color?: string;
+  win_probability_pct?: number;
+  is_won?: boolean;
+  is_lost?: boolean;
+  order_index?: number;
+}
 
 export type ScoreCategory = 'hot' | 'warm' | 'cold';
 

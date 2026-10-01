@@ -162,6 +162,44 @@ class ApiClient {
     return this.request('/pipeline/stages');
   }
 
+  async getPipelineStageConfig() {
+    return this.request('/pipeline/stages/config');
+  }
+
+  async createPipelineStage(payload: { label: string; key?: string; color?: string; win_probability_pct?: number; is_won?: boolean; is_lost?: boolean; order_index?: number }) {
+    return this.request('/pipeline/stages', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async updatePipelineStage(stageId: number, payload: { label?: string; key?: string; color?: string; win_probability_pct?: number; is_won?: boolean; is_lost?: boolean; order_index?: number }) {
+    return this.request(`/pipeline/stages/${stageId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async deletePipelineStage(stageId: number, fallbackKey?: string) {
+    const query = fallbackKey ? `?fallback_stage_key=${encodeURIComponent(fallbackKey)}` : '';
+    return this.request(`/pipeline/stages/${stageId}${query}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async reorderPipelineStages(stageIds: number[]) {
+    return this.request('/pipeline/stages/reorder', {
+      method: 'PUT',
+      body: JSON.stringify({ stage_ids: stageIds })
+    });
+  }
+
+  async resetPipelineStages() {
+    return this.request('/pipeline/stages/reset', {
+      method: 'POST'
+    });
+  }
+
   async movePipelineCard(leadId: number, newStage: string) {
     return this.request('/pipeline/move-card', {
       method: 'PATCH',

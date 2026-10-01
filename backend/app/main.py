@@ -71,7 +71,36 @@ def auto_seed_if_empty():
     except Exception as e:
         print(f"[!] Auto-seed check notice: {e}")
 
+def ensure_default_pipeline_stages():
+    try:
+        from app.database import SessionLocal
+        from app.models.models import Company, PipelineStage
+        db = SessionLocal()
+        companies = db.query(Company).all()
+        default_stages = [
+            {"key": "new_lead", "label": "New Lead", "color": "blue", "order_index": 0, "win_probability_pct": 15, "is_won": False, "is_lost": False},
+            {"key": "contacted", "label": "Contacted", "color": "indigo", "order_index": 1, "win_probability_pct": 25, "is_won": False, "is_lost": False},
+            {"key": "qualified", "label": "Qualified", "color": "amber", "order_index": 2, "win_probability_pct": 40, "is_won": False, "is_lost": False},
+            {"key": "survey_scheduled", "label": "Site Survey", "color": "purple", "order_index": 3, "win_probability_pct": 50, "is_won": False, "is_lost": False},
+            {"key": "survey_completed", "label": "Survey Done", "color": "cyan", "order_index": 4, "win_probability_pct": 60, "is_won": False, "is_lost": False},
+            {"key": "quotation_sent", "label": "Quotation Sent", "color": "orange", "order_index": 5, "win_probability_pct": 75, "is_won": False, "is_lost": False},
+            {"key": "negotiation", "label": "Negotiation", "color": "pink", "order_index": 6, "win_probability_pct": 85, "is_won": False, "is_lost": False},
+            {"key": "won", "label": "Deal Won", "color": "emerald", "order_index": 7, "win_probability_pct": 100, "is_won": True, "is_lost": False},
+            {"key": "lost", "label": "Deal Lost", "color": "red", "order_index": 8, "win_probability_pct": 0, "is_won": False, "is_lost": True},
+        ]
+        for comp in companies:
+            cnt = db.query(PipelineStage).filter(PipelineStage.company_id == comp.id).count()
+            if cnt == 0:
+                print(f"[*] Initializing default pipeline stages for tenant: {comp.name}...")
+                for s in default_stages:
+                    db.add(PipelineStage(company_id=comp.id, **s))
+                db.commit()
+        db.close()
+    except Exception as e:
+        print(f"[!] Pipeline stages initialization notice: {e}")
+
 auto_seed_if_empty()
+ensure_default_pipeline_stages()
 
 app = FastAPI(
     title="SolarFlow CRM SaaS API",

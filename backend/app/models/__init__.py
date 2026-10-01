@@ -19,6 +19,7 @@ from app.models.models import (
     FollowUpStatus,
     SurveyStatus,
     QuotationStatus,
+    PipelineStage,
     DEFAULT_ROLE_PERMISSIONS
 )
 
@@ -33,6 +34,7 @@ __all__ = [
     "FollowUp",
     "Survey",
     "Quotation",
+    "PipelineStage",
     "LeadSource",
     "AutomationRule",
     "Notification",

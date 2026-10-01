@@ -39,7 +39,8 @@ PERMISSION_CATALOG = [
         "items": [
             {"key": "pipeline:view", "name": "View Pipeline", "description": "Access visual Kanban sales board"},
             {"key": "pipeline:move", "name": "Advance Stages", "description": "Drag and move cards across sales stages"},
-            {"key": "pipeline:close_deals", "name": "Close Deals", "description": "Mark pipeline deals as Won or Lost"}
+            {"key": "pipeline:close_deals", "name": "Close Deals", "description": "Mark pipeline deals as Won or Lost"},
+            {"key": "pipeline:manage_stages", "name": "Manage Stages", "description": "Add, edit, reorder, and remove sales pipeline stages"}
         ]
     },
     {

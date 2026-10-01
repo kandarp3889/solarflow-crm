@@ -38,8 +38,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [followups, setFollowups] = useState<FollowUp[]>([]);
   const [hotLeads, setHotLeads] = useState<Lead[]>([]);
 
-  const fetchDashboard = async () => {
-    setLoading(true);
+  const fetchDashboard = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     try {
       const [s, sources, funnel, rev, team, fUps, leads] = await Promise.all([
         api.getDashboardStats(),
@@ -61,7 +61,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     } catch (err) {
       console.error('Error fetching dashboard:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -75,10 +75,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   };
 
   useEffect(() => {
-    fetchDashboard();
+    fetchDashboard(true);
 
     const handleDataUpdate = () => {
-      fetchDashboard();
+      fetchDashboard(false);
       fetchTrend();
     };
     window.addEventListener('crm-data-updated', handleDataUpdate);

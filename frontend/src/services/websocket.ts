@@ -54,10 +54,8 @@ class NotificationWebSocket {
           if (event.data === 'pong') return;
           const data = JSON.parse(event.data);
           if (data.type === 'new_notification' && data.notification) {
-            // Deliver notification to registered UI subscribers
+            // Deliver notification exclusively to registered notification UI subscribers (Header bell, count, toast)
             this.subscribers.forEach(cb => cb(data.notification));
-            // Trigger crm-data-updated event so active tables/kanban boards auto-refresh
-            window.dispatchEvent(new CustomEvent('crm-data-updated'));
           }
         } catch (e) {
           // ignore non-json messages

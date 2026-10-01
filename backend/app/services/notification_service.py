@@ -3,6 +3,7 @@ from typing import List, Optional, Union
 from sqlalchemy.orm import Session
 from app.models.models import Notification, User, UserRole, Lead, FollowUp, Survey, Quotation
 from app.services.email_service import send_notification_email
+from app.services.websocket_manager import emit_realtime_notification
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +124,26 @@ def dispatch_targeted_notification(
 
         if created_notifs:
             db.commit()
+            for notif in created_notifs:
+                try:
+                    db.refresh(notif)
+                    emit_realtime_notification(
+                        user_id=notif.user_id,
+                        payload={
+                            "type": "new_notification",
+                            "notification": {
+                                "id": notif.id,
+                                "title": notif.title,
+                                "message": notif.message,
+                                "category": notif.category,
+                                "link_url": notif.link_url,
+                                "is_read": notif.is_read,
+                                "created_at": notif.created_at.isoformat() if notif.created_at else None
+                            }
+                        }
+                    )
+                except Exception as ex:
+                    logger.warning(f"Failed to emit realtime ws notification: {ex}")
 
         logger.info(f"Targeted dispatch: {len(created_notifs)} recipient(s) for event '{title}'")
         return created_notifs

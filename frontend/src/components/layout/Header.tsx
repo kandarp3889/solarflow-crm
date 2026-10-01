@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { NotificationItem } from '../../types';
+import { notificationWS } from '../../services/websocket';
 
 interface HeaderProps {
   setIsMobileOpen: (open: boolean) => void;
@@ -34,7 +35,9 @@ export const Header: React.FC<HeaderProps> = ({
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [activeToast, setActiveToast] = useState<NotificationItem | null>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  const toastTimeoutRef = useRef<any>(null);
 
   const fetchNotifs = async () => {
     try {
@@ -47,19 +50,44 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   useEffect(() => {
+    if (!user) return;
+
     fetchNotifs();
-    const interval = setInterval(fetchNotifs, 30000);
+    // Fallback polling interval every 10 seconds
+    const interval = setInterval(fetchNotifs, 10000);
 
     const handleDataUpdate = () => {
       fetchNotifs();
     };
     window.addEventListener('crm-data-updated', handleDataUpdate);
 
+    // Reconnect WebSocket with active session token
+    notificationWS.reconnect();
+
+    // Subscribe to instant real-time notifications
+    const unsubscribeWS = notificationWS.subscribe((newNotif: NotificationItem) => {
+      setNotifications((prev) => {
+        const exists = prev.some((n) => n.id === newNotif.id);
+        if (exists) return prev;
+        return [newNotif, ...prev];
+      });
+      setUnreadCount((prev) => prev + 1);
+
+      // Trigger floating real-time toast alert
+      setActiveToast(newNotif);
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = setTimeout(() => {
+        setActiveToast(null);
+      }, 5000);
+    });
+
     return () => {
       clearInterval(interval);
       window.removeEventListener('crm-data-updated', handleDataUpdate);
+      unsubscribeWS();
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -76,6 +104,18 @@ export const Header: React.FC<HeaderProps> = ({
       await api.markAllNotificationsRead();
       setNotifications(notifications.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const handleMarkSingleRead = async (id: number) => {
+    try {
+      await api.markNotificationRead(id);
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, is_read: true } : n))
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (e) {
       // ignore
     }
@@ -205,16 +245,26 @@ export const Header: React.FC<HeaderProps> = ({
                   notifications.map((n) => (
                     <div
                       key={n.id}
-                      className={`p-3.5 transition-colors ${
+                      onClick={() => {
+                        if (!n.is_read) {
+                          handleMarkSingleRead(n.id);
+                        }
+                      }}
+                      className={`p-3.5 transition-colors cursor-pointer ${
                         n.is_read ? 'opacity-60 bg-transparent' : 'bg-[#121e16]/60'
                       } hover:bg-[#15271b]`}
                     >
                       <div className="flex items-start gap-2.5">
-                        <div className="p-1 rounded-lg bg-[#106828]/30 text-emerald-400 mt-0.5">
+                        <div className={`p-1 rounded-lg mt-0.5 ${n.is_read ? 'bg-slate-800 text-slate-400' : 'bg-[#106828]/30 text-emerald-400'}`}>
                           <CheckCircle2 className="w-3.5 h-3.5" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-slate-200">{n.title}</p>
+                          <div className="flex items-center justify-between gap-1">
+                            <p className={`text-xs font-semibold ${n.is_read ? 'text-slate-300' : 'text-white'}`}>{n.title}</p>
+                            {!n.is_read && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#FEC426] shrink-0" />
+                            )}
+                          </div>
                           <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{n.message}</p>
                           <span className="text-[9px] text-slate-500 mt-1 block">
                             {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -229,6 +279,40 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
       </div>
+
+      {/* Real-time Notification Floating Alert Toast */}
+      {activeToast && (
+        <div 
+          onClick={() => {
+            setIsNotifOpen(true);
+            setActiveToast(null);
+          }}
+          className="fixed bottom-5 right-5 z-50 flex items-start gap-3 p-4 max-w-sm rounded-2xl bg-[#0d1711] border border-[#FEC426]/60 shadow-2xl shadow-black/80 backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-300 cursor-pointer hover:border-[#FEC426] transition-all"
+        >
+          <div className="p-2 rounded-xl bg-[#FEC426]/10 text-[#FEC426] shrink-0 mt-0.5">
+            <Bell className="w-5 h-5 animate-bounce" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#FEC426] bg-[#FEC426]/10 px-1.5 py-0.5 rounded">
+                Live Notification
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveToast(null);
+                }}
+                className="text-slate-400 hover:text-white p-0.5 rounded-md hover:bg-[#15271b]"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <p className="text-xs font-bold text-white mt-1 line-clamp-1">{activeToast.title}</p>
+            <p className="text-[11px] text-slate-300 mt-0.5 line-clamp-2">{activeToast.message}</p>
+            <span className="text-[9px] text-slate-400 font-mono mt-1 block">Just now • Click to open</span>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

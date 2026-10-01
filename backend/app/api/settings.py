@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.models import Company, User, UserRole
 from app.api.deps import get_current_company, require_roles
+from app.services.email_service import get_company_email_config, test_smtp_connection
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
 
@@ -25,15 +26,25 @@ class SolarSettingsUpdate(BaseModel):
     subsidy_rules: Optional[dict] = None
     score_thresholds: Optional[dict] = None
 
-class IntegrationSettingsUpdate(BaseModel):
-    whatsapp_enabled: Optional[bool] = False
-    whatsapp_phone_number_id: Optional[str] = None
-    whatsapp_access_token: Optional[str] = None
-    meta_leads_webhook_url: Optional[str] = None
-    google_ads_webhook_url: Optional[str] = None
+class EmailSettingsUpdate(BaseModel):
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = 587
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    from_email: Optional[str] = None
+    from_name: Optional[str] = None
+    use_tls: Optional[bool] = True
+    is_enabled: Optional[bool] = True
+
+class EmailTestRequest(BaseModel):
+    to_email: str
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = None
     smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    from_email: Optional[str] = None
+    from_name: Optional[str] = None
+    use_tls: Optional[bool] = None
 
 @router.get("/company")
 def get_company_settings(company: Company = Depends(get_current_company)):
@@ -78,8 +89,107 @@ def update_solar_settings(
     db.commit()
     return company.solar_settings
 
+@router.get("/email")
+def get_email_settings(
+    company: Company = Depends(get_current_company),
+    current_user: User = Depends(require_roles([UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]))
+):
+    cfg = get_company_email_config(company.solar_settings)
+    masked_pw = "••••••••" if cfg.get("smtp_password") else ""
+    return {
+        "smtp_host": cfg.get("smtp_host", ""),
+        "smtp_port": cfg.get("smtp_port", 587),
+        "smtp_user": cfg.get("smtp_user", ""),
+        "smtp_password": masked_pw,
+        "has_password": bool(cfg.get("smtp_password")),
+        "from_email": cfg.get("from_email", ""),
+        "from_name": cfg.get("from_name", ""),
+        "use_tls": cfg.get("use_tls", True),
+        "is_enabled": cfg.get("is_enabled", True)
+    }
+
+@router.put("/email")
+def update_email_settings(
+    email_in: EmailSettingsUpdate,
+    company: Company = Depends(get_current_company),
+    current_user: User = Depends(require_roles([UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN])),
+    db: Session = Depends(get_db)
+):
+    current_solar = dict(company.solar_settings or {})
+    current_email = dict(current_solar.get("email") or {})
+
+    update_data = email_in.dict(exclude_unset=True)
+
+    # Don't overwrite if password is empty or still masked
+    if not update_data.get("smtp_password") or update_data.get("smtp_password") == "••••••••":
+        if "smtp_password" in update_data:
+            del update_data["smtp_password"]
+
+    current_email.update(update_data)
+    current_solar["email"] = current_email
+    company.solar_settings = current_solar
+
+    db.commit()
+    db.refresh(company)
+
+    cfg = get_company_email_config(company.solar_settings)
+    return {
+        "status": "success",
+        "message": "Email settings saved successfully!",
+        "settings": {
+            "smtp_host": cfg.get("smtp_host"),
+            "smtp_port": cfg.get("smtp_port"),
+            "smtp_user": cfg.get("smtp_user"),
+            "has_password": bool(cfg.get("smtp_password")),
+            "from_email": cfg.get("from_email"),
+            "from_name": cfg.get("from_name"),
+            "use_tls": cfg.get("use_tls"),
+            "is_enabled": cfg.get("is_enabled")
+        }
+    }
+
+@router.post("/email/test")
+def test_email_settings_endpoint(
+    test_req: EmailTestRequest,
+    company: Company = Depends(get_current_company),
+    current_user: User = Depends(require_roles([UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]))
+):
+    cfg = get_company_email_config(company.solar_settings)
+
+    host = test_req.smtp_host or cfg.get("smtp_host")
+    port = test_req.smtp_port or cfg.get("smtp_port") or 587
+    user = test_req.smtp_user or cfg.get("smtp_user")
+
+    password = test_req.smtp_password
+    if not password or password == "••••••••":
+        password = cfg.get("smtp_password")
+
+    from_email = test_req.from_email or cfg.get("from_email")
+    from_name = test_req.from_name or cfg.get("from_name")
+    use_tls = test_req.use_tls if test_req.use_tls is not None else cfg.get("use_tls", True)
+
+    success, message = test_smtp_connection(
+        host=host,
+        port=int(port),
+        user=user,
+        password=password,
+        from_email=from_email,
+        from_name=from_name,
+        to_email=test_req.to_email,
+        use_tls=use_tls
+    )
+
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+
+    return {
+        "success": True,
+        "message": message
+    }
+
 @router.get("/integrations")
 def get_integrations(company: Company = Depends(get_current_company)):
+    cfg = get_company_email_config(company.solar_settings)
     return {
         "whatsapp": {
             "status": "connected",
@@ -96,8 +206,9 @@ def get_integrations(company: Company = Depends(get_current_company)):
             "conversion_action": "Solar Quote Lead Form"
         },
         "smtp": {
-            "status": "configured",
-            "host": "smtp.mailtrap.io",
-            "port": 2525
+            "status": "configured" if cfg.get("smtp_user") and cfg.get("smtp_password") else "sandbox",
+            "host": cfg.get("smtp_host", "smtp.mailtrap.io"),
+            "port": cfg.get("smtp_port", 2525),
+            "from_email": cfg.get("from_email")
         }
     }

@@ -13,10 +13,11 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { EmailSettingsPage } from './EmailSettingsPage';
 
 export const SettingsPage: React.FC = () => {
   const { company } = useAuth();
-  const [activeTab, setActiveTab] = useState<'company' | 'solar' | 'integrations'>('company');
+  const [activeTab, setActiveTab] = useState<'company' | 'email' | 'solar' | 'integrations'>('company');
   const [saving, setSaving] = useState(false);
 
   // Company Form State
@@ -114,6 +115,7 @@ export const SettingsPage: React.FC = () => {
       <div className="flex border-b border-slate-800 bg-slate-900/60 p-1.5 rounded-2xl gap-1 overflow-x-auto">
         {[
           { id: 'company', label: 'Company Profile & Entity', icon: Building },
+          { id: 'email', label: 'Email & SMTP Gateway', icon: Mail },
           { id: 'solar', label: 'Solar Pricing & Subsidies', icon: Sun },
           { id: 'integrations', label: 'API Integrations & Webhooks', icon: Share2 }
         ].map(tab => {
@@ -300,7 +302,12 @@ export const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 3: API Integrations */}
+      {/* Tab 2: Email Configuration */}
+      {activeTab === 'email' && (
+        <EmailSettingsPage />
+      )}
+
+      {/* Tab 4: API Integrations */}
       {activeTab === 'integrations' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* WhatsApp Cloud API */}

@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional, Union
 from sqlalchemy.orm import Session
-from app.models.models import Notification, User, UserRole, Lead, FollowUp, Survey, Quotation
+from app.models.models import Notification, User, UserRole, Lead, FollowUp, Survey, Quotation, Company
 from app.services.email_service import send_notification_email
 from app.services.websocket_manager import emit_realtime_notification
 
@@ -96,6 +96,9 @@ def dispatch_targeted_notification(
             ).all()
             target_users = admins
 
+        company = db.query(Company).filter(Company.id == company_id).first()
+        company_settings = company.solar_settings if company else None
+
         created_notifs = []
         for recipient in target_users:
             # 1. In-App Notification
@@ -119,7 +122,8 @@ def dispatch_targeted_notification(
                     subject=f"[SolarFlow CRM] {title}",
                     title=title,
                     message=message,
-                    link_url=link_url
+                    link_url=link_url,
+                    company_settings=company_settings
                 )
 
         if created_notifs:

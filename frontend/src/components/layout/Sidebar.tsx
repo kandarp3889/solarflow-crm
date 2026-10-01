@@ -12,6 +12,7 @@ import {
   Zap,
   BarChart3,
   Settings,
+  Mail,
   ChevronRight,
   LogOut
 } from 'lucide-react';
@@ -46,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'team', label: 'Sales Team', icon: UserCheck, roles: ['super_admin', 'company_admin', 'sales_manager'] },
     { id: 'automation', label: 'Automation', icon: Zap, roles: ['super_admin', 'company_admin'] },
     { id: 'reports', label: 'Reports & Export', icon: BarChart3, roles: ['super_admin', 'company_admin', 'sales_manager'] },
+    { id: 'email-settings', label: 'Email Configuration', icon: Mail, roles: ['super_admin', 'company_admin'] },
     { id: 'settings', label: 'Company Settings', icon: Settings, roles: ['super_admin', 'company_admin'] },
   ];
 

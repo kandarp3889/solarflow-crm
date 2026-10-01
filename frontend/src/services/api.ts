@@ -490,6 +490,25 @@ class ApiClient {
     return this.request('/settings/integrations');
   }
 
+  // Email / SMTP Settings
+  async getEmailSettings() {
+    return this.request('/settings/email');
+  }
+
+  async updateEmailSettings(data: any) {
+    return this.request('/settings/email', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async testEmailSettings(data: any) {
+    return this.request('/settings/email/test', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
   // Notifications
   async getNotifications() {
     return this.request('/notifications');

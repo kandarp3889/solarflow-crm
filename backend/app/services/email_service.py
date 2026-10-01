@@ -8,15 +8,55 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-def _send_email_worker(to_email: str, recipient_name: str, subject: str, title: str, message: str, link_url: Optional[str]):
+def get_company_email_config(company_settings_or_dict: Optional[dict] = None) -> dict:
+    """Extract email configuration from company settings with fallback to environment variables."""
+    email_cfg = (company_settings_or_dict or {}).get("email") or {}
+    host = email_cfg.get("smtp_host") or settings.SMTP_HOST
+    port = int(email_cfg.get("smtp_port") or settings.SMTP_PORT or 587)
+    user = email_cfg.get("smtp_user") or settings.SMTP_USER
+    password = email_cfg.get("smtp_password") or settings.SMTP_PASSWORD
+    from_email = email_cfg.get("from_email") or settings.EMAILS_FROM_EMAIL or "info.truesunenergy@gmail.com"
+    from_name = email_cfg.get("from_name") or settings.EMAILS_FROM_NAME or "True Sun Energy"
+    use_tls = email_cfg.get("use_tls", True)
+    is_enabled = email_cfg.get("is_enabled", True)
+    return {
+        "smtp_host": host,
+        "smtp_port": port,
+        "smtp_user": user,
+        "smtp_password": password,
+        "from_email": from_email,
+        "from_name": from_name,
+        "use_tls": use_tls,
+        "is_enabled": is_enabled
+    }
+
+def _send_email_worker(
+    to_email: str,
+    recipient_name: str,
+    subject: str,
+    title: str,
+    message: str,
+    link_url: Optional[str],
+    company_settings: Optional[dict] = None
+):
     """Background worker to format and dispatch email via SMTP safely."""
     try:
         if not to_email:
             logger.warning("Cannot send email: recipient email is empty.")
             return
 
-        from_email = settings.EMAILS_FROM_EMAIL or "notifications@solarflowcrm.com"
-        from_name = settings.EMAILS_FROM_NAME or "SolarFlow CRM"
+        cfg = get_company_email_config(company_settings)
+        if not cfg.get("is_enabled"):
+            logger.info("Email notifications are disabled in company settings.")
+            return
+
+        from_email = cfg["from_email"]
+        from_name = cfg["from_name"]
+        smtp_host = cfg["smtp_host"]
+        smtp_port = cfg["smtp_port"]
+        smtp_user = cfg["smtp_user"]
+        smtp_password = cfg["smtp_password"]
+        use_tls = cfg["use_tls"]
 
         # Construct Plain Text Body
         text_body = (
@@ -60,48 +100,47 @@ def _send_email_worker(to_email: str, recipient_name: str, subject: str, title: 
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0">
                                         <tr>
                                             <td>
-                                                <div style="display: inline-block; width: 12px; height: 12px; background-color: #FEC426; border-radius: 50%; margin-right: 8px;"></div>
-                                                <span style="font-size: 18px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">True Sun <span style="color: #FEC426;">Energy</span> CRM</span>
+                                                <span style="font-size: 18px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
+                                                    True Sun <span style="color: #FEC426;">Energy</span>
+                                                </span>
+                                                <div style="font-size: 11px; color: #10b981; margin-top: 2px; font-weight: 600;">
+                                                    Solar Rooftop CRM Automation
+                                                </div>
                                             </td>
                                             <td align="right">
-                                                <span style="font-size: 11px; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.12); padding: 4px 10px; border-radius: 9999px; border: 1px solid rgba(16, 185, 129, 0.3);">
-                                                    CRM Notification
+                                                <span style="display: inline-block; padding: 4px 10px; font-size: 10px; font-weight: 700; color: #FEC426; background-color: rgba(254, 196, 38, 0.12); border: 1px solid rgba(254, 196, 38, 0.25); border-radius: 20px; text-transform: uppercase;">
+                                                    Live Alert
                                                 </span>
                                             </td>
                                         </tr>
                                     </table>
                                 </td>
                             </tr>
-                            
-                            <!-- Main Content Area -->
+
+                            <!-- Body Content -->
                             <tr>
                                 <td style="padding: 32px;">
-                                    <p style="font-size: 14px; color: #94a3b8; margin: 0 0 16px 0;">Hello <strong style="color: #f8fafc;">{recipient_name}</strong>,</p>
-                                    
-                                    <h2 style="font-size: 20px; font-weight: 700; color: #f8fafc; margin: 0 0 16px 0; line-height: 1.3;">
+                                    <h3 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; color: #ffffff; line-height: 1.4;">
                                         {title}
-                                    </h2>
-                                    
-                                    <div style="background-color: #142318; border-left: 4px solid #FEC426; border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
-                                        <p style="font-size: 14px; color: #e2e8f0; line-height: 1.6; margin: 0;">
-                                            {message}
+                                    </h3>
+                                    <div style="font-size: 14px; line-height: 1.6; color: #94a3b8; margin-bottom: 24px;">
+                                        {message}
+                                    </div>
+
+                                    {action_btn_html}
+
+                                    <div style="border-top: 1px solid #1e3423; padding-top: 20px; margin-top: 20px;">
+                                        <p style="margin: 0; font-size: 12px; color: #64748b;">
+                                            This automated notification was sent to <strong>{to_email}</strong>.
                                         </p>
                                     </div>
-                                    
-                                    {action_btn_html}
-                                    
-                                    <p style="font-size: 12px; color: #64748b; margin: 24px 0 0 0; line-height: 1.5;">
-                                        This alert was sent directly to you based on your assigned role and responsibilities for this solar rooftop inquiry.
-                                    </p>
                                 </td>
                             </tr>
-                            
+
                             <!-- Footer -->
                             <tr>
-                                <td style="padding: 20px 32px; background-color: #0b140e; border-top: 1px solid #16281b; text-align: center;">
-                                    <p style="font-size: 11px; color: #64748b; margin: 0;">
-                                        &copy; 2026 True Sun Energy Private Limited &bull; SolarFlow CRM Automation Engine
-                                    </p>
+                                <td style="padding: 20px 32px; background-color: #0a130d; border-top: 1px solid #1e3423; text-align: center; font-size: 11px; color: #475569;">
+                                    &copy; 2026 True Sun Energy Pvt Ltd &bull; Mangrol, Gujarat &bull; Support: +91 99740 45095
                                 </td>
                             </tr>
                         </table>
@@ -113,7 +152,7 @@ def _send_email_worker(to_email: str, recipient_name: str, subject: str, title: 
         """
 
         # Check if SMTP credentials configured
-        if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        if not smtp_host or not smtp_user or not smtp_password:
             logger.info(
                 f"[EMAIL DISPATCH (Local/Sandbox)] To: {to_email} ({recipient_name}) | Subject: {subject} | Message: {message[:120]}..."
             )
@@ -131,13 +170,19 @@ def _send_email_worker(to_email: str, recipient_name: str, subject: str, title: 
         msg.attach(part2)
 
         # Dispatch via SMTP
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=8) as server:
-            try:
-                server.starttls()
-            except Exception:
-                pass  # Server might not require or support STARTTLS
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-            server.sendmail(from_email, [to_email], msg.as_string())
+        if smtp_port == 465:
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as server:
+                server.login(smtp_user, smtp_password)
+                server.sendmail(from_email, [to_email], msg.as_string())
+        else:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+                if use_tls:
+                    try:
+                        server.starttls()
+                    except Exception:
+                        pass
+                server.login(smtp_user, smtp_password)
+                server.sendmail(from_email, [to_email], msg.as_string())
 
         logger.info(f"Successfully delivered notification email to {to_email}")
 
@@ -150,7 +195,8 @@ def send_notification_email(
     subject: str,
     title: str,
     message: str,
-    link_url: Optional[str] = None
+    link_url: Optional[str] = None,
+    company_settings: Optional[dict] = None
 ):
     """
     Non-blocking asynchronous dispatch for notification emails.
@@ -161,7 +207,70 @@ def send_notification_email(
 
     thread = threading.Thread(
         target=_send_email_worker,
-        args=(to_email, recipient_name, subject, title, message, link_url),
+        args=(to_email, recipient_name, subject, title, message, link_url, company_settings),
         daemon=True
     )
     thread.start()
+
+def test_smtp_connection(
+    host: str,
+    port: int,
+    user: str,
+    password: str,
+    from_email: str,
+    from_name: str,
+    to_email: str,
+    use_tls: bool = True
+) -> tuple[bool, str]:
+    """Test SMTP handshake and dispatch a verification email."""
+    try:
+        if not host or not user or not password:
+            return False, "SMTP Host, Username, and Password are all required."
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "[True Sun Energy CRM] SMTP Configuration Test Successful"
+        msg["From"] = f"{from_name} <{from_email}>"
+        msg["To"] = to_email
+
+        test_html = f"""
+        <div style="font-family: Arial, sans-serif; background: #080f0a; padding: 32px 16px; color: #f1f5f9;">
+            <div style="max-width: 520px; margin: auto; background: #0f1a12; border: 1px solid #1e3423; border-radius: 16px; padding: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                    <span style="font-size: 20px; font-weight: 800; color: #ffffff;">True Sun <span style="color: #FEC426;">Energy</span></span>
+                </div>
+                <h3 style="color: #10b981; margin: 0 0 12px 0; font-size: 18px;">&check; SMTP Test Email Successful!</h3>
+                <p style="color: #94a3b8; font-size: 13px; line-height: 1.6;">
+                    Congratulations! Your SMTP email server configuration in <strong>True Sun Energy CRM</strong> has been successfully verified.
+                </p>
+                <div style="background: #132417; border: 1px solid #1e3423; border-radius: 10px; padding: 14px 18px; margin: 20px 0; font-size: 12px; color: #cbd5e1;">
+                    <p style="margin: 3px 0;"><strong>SMTP Server:</strong> {host}:{port}</p>
+                    <p style="margin: 3px 0;"><strong>Sender:</strong> {from_name} &lt;{from_email}&gt;</p>
+                    <p style="margin: 3px 0;"><strong>Security:</strong> {"SSL (Port 465)" if port == 465 else ("STARTTLS Enabled" if use_tls else "Standard")}</p>
+                </div>
+                <p style="color: #64748b; font-size: 11px; margin: 0;">
+                    Automated lead assignment notifications and customer proposal emails will now be sent using this server.
+                </p>
+            </div>
+        </div>
+        """
+        msg.attach(MIMEText("True Sun Energy CRM SMTP configuration test successful!", "plain", "utf-8"))
+        msg.attach(MIMEText(test_html, "html", "utf-8"))
+
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, timeout=10) as server:
+                server.login(user, password)
+                server.sendmail(from_email, [to_email], msg.as_string())
+        else:
+            with smtplib.SMTP(host, port, timeout=10) as server:
+                if use_tls:
+                    server.starttls()
+                server.login(user, password)
+                server.sendmail(from_email, [to_email], msg.as_string())
+
+        return True, f"Test email sent successfully to {to_email}!"
+
+    except smtplib.SMTPAuthenticationError as auth_err:
+        err_msg = auth_err.smtp_error.decode() if isinstance(auth_err.smtp_error, bytes) else str(auth_err)
+        return False, f"Authentication Failed: {err_msg}. If using Gmail, make sure to generate and use a 16-character Google App Password."
+    except Exception as e:
+        return False, f"SMTP Connection Failed: {str(e)}"

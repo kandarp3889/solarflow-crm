@@ -23,6 +23,7 @@ import { TeamManagement } from './components/team/TeamManagement';
 import { AutomationWorkflow } from './components/automation/AutomationWorkflow';
 import { ReportsPage } from './components/reports/ReportsPage';
 import { SettingsPage } from './components/settings/SettingsPage';
+import { EmailSettingsPage } from './components/settings/EmailSettingsPage';
 
 // Define RBAC allowed roles per module
 const TAB_ROLES: Record<string, UserRole[]> = {
@@ -37,6 +38,7 @@ const TAB_ROLES: Record<string, UserRole[]> = {
   team: ['super_admin', 'company_admin', 'sales_manager'],
   automation: ['super_admin', 'company_admin'],
   reports: ['super_admin', 'company_admin', 'sales_manager'],
+  'email-settings': ['super_admin', 'company_admin'],
   settings: ['super_admin', 'company_admin'],
 };
 
@@ -223,6 +225,8 @@ const SolarCRMApp: React.FC = () => {
               {currentTab === 'automation' && <AutomationWorkflow />}
 
               {currentTab === 'reports' && <ReportsPage />}
+
+              {currentTab === 'email-settings' && <EmailSettingsPage />}
 
               {currentTab === 'settings' && <SettingsPage />}
             </>

@@ -133,7 +133,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
       </div>
 
-      {/* Top 9 KPI Cards */}
+      {/* Top 8 KPI Cards */}
       <KpiCards stats={stats} loading={loading} />
 
       {/* Interactive Charts Section - Row 1 */}

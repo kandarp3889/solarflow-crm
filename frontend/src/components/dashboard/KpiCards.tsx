@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Users,
   UserPlus,
-  CheckCircle,
   ClipboardCheck,
   FileSpreadsheet,
   Trophy,
@@ -22,8 +21,8 @@ interface KpiCardsProps {
 export const KpiCards: React.FC<KpiCardsProps> = ({ stats, loading }) => {
   if (loading || !stats) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
-        {[...Array(9)].map((_, i) => (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+        {[...Array(8)].map((_, i) => (
           <div key={i} className="h-28 rounded-2xl bg-slate-800/40 animate-pulse border border-slate-800" />
         ))}
       </div>
@@ -40,11 +39,6 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ stats, loading }) => {
       data: stats.new_leads,
       icon: UserPlus,
       accent: 'text-blue-400 bg-blue-400/10 border-blue-400/20'
-    },
-    {
-      data: stats.qualified_leads,
-      icon: CheckCircle,
-      accent: 'text-purple-400 bg-purple-400/10 border-purple-400/20'
     },
     {
       data: stats.site_surveys,
@@ -79,7 +73,7 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ stats, loading }) => {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
       {items.map((item, index) => {
         const Icon = item.icon;
         const d = item.data;

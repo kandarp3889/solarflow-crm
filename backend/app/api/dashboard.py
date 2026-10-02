@@ -26,7 +26,6 @@ def get_dashboard_stats(
 
     total_leads = db.query(Lead).filter(Lead.company_id == cid).count()
     new_leads = db.query(Lead).filter(Lead.company_id == cid, Lead.stage == LeadStage.NEW_LEAD.value).count()
-    qualified_leads = db.query(Lead).filter(Lead.company_id == cid, Lead.stage == LeadStage.QUALIFIED.value).count()
     site_surveys = db.query(Survey).filter(Survey.company_id == cid).count()
     quotations_sent = db.query(Quotation).filter(Quotation.company_id == cid).count()
     won_deals = db.query(Lead).filter(Lead.company_id == cid, Lead.stage == LeadStage.WON.value).count()
@@ -64,14 +63,6 @@ def get_dashboard_stats(
             change_pct=12.5,
             is_positive=True,
             description="uncontacted inquiries"
-        ),
-        qualified_leads=KpiCard(
-            label="Qualified Leads",
-            value=f"{qualified_leads:,}",
-            numeric_value=float(qualified_leads),
-            change_pct=15.2,
-            is_positive=True,
-            description="meeting rooftop criteria"
         ),
         site_surveys=KpiCard(
             label="Site Surveys",

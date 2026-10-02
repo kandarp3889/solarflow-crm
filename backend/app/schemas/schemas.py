@@ -508,7 +508,6 @@ class KpiCard(BaseModel):
 class DashboardStatsResponse(BaseModel):
     total_leads: KpiCard
     new_leads: KpiCard
-    qualified_leads: KpiCard
     site_surveys: KpiCard
     quotations_sent: KpiCard
     won_deals: KpiCard

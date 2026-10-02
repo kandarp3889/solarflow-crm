@@ -413,7 +413,6 @@ export interface KpiCardData {
 export interface DashboardStats {
   total_leads: KpiCardData;
   new_leads: KpiCardData;
-  qualified_leads: KpiCardData;
   site_surveys: KpiCardData;
   quotations_sent: KpiCardData;
   won_deals: KpiCardData;

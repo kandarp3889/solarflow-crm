@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft,
   Check,
@@ -8,11 +8,18 @@ import {
   FileText,
   IndianRupee,
   Sparkles,
-  Link as LinkIcon,
   Copy,
   Info,
-  Calendar,
-  Layers
+  Layers,
+  Search,
+  Percent,
+  ChevronDown,
+  ChevronUp,
+  Tag,
+  Sliders,
+  CheckCircle2,
+  HelpCircle,
+  ArrowUpDown
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { Invoice, InvoiceItem, InvoiceStatus } from '../../types';
@@ -24,12 +31,64 @@ interface InvoiceFormProps {
   onSuccess: (savedInvoice: Invoice) => void;
 }
 
-// Client-side Indian words generator for live preview
+// ---------------------------------------------------------------------------
+// 1. HSN / SAC Database for Smart Auto-Lookup & Recommendations
+// ---------------------------------------------------------------------------
+export interface HsnSuggestion {
+  code: string;
+  category: string;
+  description: string;
+  defaultGst: number;
+}
+
+export const HSN_DATABASE: HsnSuggestion[] = [
+  { code: '8541', category: 'Solar Panels', description: 'Photovoltaic Cells, Solar PV Modules / Panels', defaultGst: 5 },
+  { code: '8504', category: 'Inverters', description: 'Solar Grid-Tie / Hybrid Inverters, Static Converters', defaultGst: 12 },
+  { code: '9987', category: 'Installation', description: 'Solar Structure Erection, BOS & Installation Services', defaultGst: 18 },
+  { code: '8537', category: 'Switchgear', description: 'ACDB, DCDB Panels, Distribution Boards & Protection', defaultGst: 18 },
+  { code: '7308', category: 'Structures', description: 'Solar Module Mounting Structures (GI / Aluminium)', defaultGst: 18 },
+  { code: '8544', category: 'Cables', description: 'Solar DC Cables (4/6 sq mm), AC Wires & Conductors', defaultGst: 18 },
+  { code: '8507', category: 'Batteries', description: 'Solar Storage Batteries (Lithium-ion / Lead Acid)', defaultGst: 18 },
+  { code: '9030', category: 'Meters', description: 'Net Meters, Bi-Directional Generation Check Meters', defaultGst: 18 },
+  { code: '8536', category: 'Protection', description: 'MC4 Connectors, DC Fuses, Surge Protection Devices (SPD)', defaultGst: 18 },
+  { code: '8535', category: 'Earthing', description: 'Chemical Earthing Electrodes & Lightning Arresters', defaultGst: 18 },
+  { code: '8413', category: 'Pumps', description: 'Solar Submersible / Surface Water Pumping Systems', defaultGst: 12 },
+  { code: '9954', category: 'Civil', description: 'General Construction Services & Foundation Casting', defaultGst: 18 },
+  { code: '9983', category: 'Engineering', description: 'Consulting, Architectural & Technical Design Services', defaultGst: 18 },
+  { code: '9985', category: 'Labor', description: 'Liaisoning, Discom Approvals & Site Labor Services', defaultGst: 18 }
+];
+
+// ---------------------------------------------------------------------------
+// 2. Standard Indian GST Units of Measurement (UQC)
+// ---------------------------------------------------------------------------
+export const GST_UNITS = [
+  { code: 'NOS', label: 'NOS - Numbers' },
+  { code: 'SET', label: 'SET - Sets' },
+  { code: 'SITE', label: 'SITE - Site / Turnkey' },
+  { code: 'KW', label: 'KW - Kilowatts' },
+  { code: 'WATT', label: 'WATT - Watts' },
+  { code: 'PCS', label: 'PCS - Pieces' },
+  { code: 'MTR', label: 'MTR - Meters' },
+  { code: 'KG', label: 'KG - Kilograms' },
+  { code: 'BOX', label: 'BOX - Boxes' },
+  { code: 'LOT', label: 'LOT - Lots' },
+  { code: 'HRS', label: 'HRS - Hours' },
+  { code: 'JOB', label: 'JOB - Job Work' },
+  { code: 'SQF', label: 'SQF - Square Feet' },
+  { code: 'PAC', label: 'PAC - Packs' },
+  { code: 'UNT', label: 'UNT - Units' }
+];
+
+// ---------------------------------------------------------------------------
+// 3. Indian Words Generator for Live Currency Preview
+// ---------------------------------------------------------------------------
 function convertToIndianWords(amount: number): string {
   if (!amount || isNaN(amount) || amount === 0) return 'Rupees Zero Only';
 
-  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
-    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const ones = [
+    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+  ];
   const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 
   function numBelow1000(n: number): string {
@@ -70,6 +129,67 @@ function convertToIndianWords(amount: number): string {
     res += ` and ${numBelow1000(paise)} Paise`;
   }
   return res + ' Only';
+}
+
+// ---------------------------------------------------------------------------
+// 4. Line Item Math Calculation (Handles Tax Inclusive & Exclusive + Discounts)
+// ---------------------------------------------------------------------------
+export function computeItemMath(item: InvoiceItem) {
+  const qty = Number(item.quantity) || 0;
+  const unitPrice = Number(item.unit_price) || 0;
+  const gstRate = Number(item.gst_rate) || 0;
+  const isTaxInclusive = Boolean(item.is_tax_inclusive);
+  const discountType = item.discount_type || 'percent';
+  const discountValue = Number(item.discount_value) || 0;
+
+  const rawTotal = Math.round(qty * unitPrice * 100) / 100;
+  let discountAmount = 0;
+  if (discountType === 'percent') {
+    discountAmount = Math.round((rawTotal * (discountValue / 100)) * 100) / 100;
+  } else {
+    discountAmount = Math.round(discountValue * 100) / 100;
+  }
+  discountAmount = Math.min(rawTotal, Math.max(0, discountAmount));
+
+  let taxableAmount = 0;
+  let taxAmount = 0;
+  let lineTotal = 0;
+
+  if (isTaxInclusive) {
+    // Price entered includes GST (MRP / Retail pricing mode)
+    const grossAfterDisc = Math.round((rawTotal - discountAmount) * 100) / 100;
+    if (gstRate > 0) {
+      taxableAmount = Math.round((grossAfterDisc / (1 + (gstRate / 100))) * 100) / 100;
+      taxAmount = Math.round((grossAfterDisc - taxableAmount) * 100) / 100;
+    } else {
+      taxableAmount = grossAfterDisc;
+      taxAmount = 0;
+    }
+    lineTotal = grossAfterDisc;
+  } else {
+    // Price entered is base rate (Standard GST pricing mode)
+    taxableAmount = Math.round((rawTotal - discountAmount) * 100) / 100;
+    if (gstRate > 0) {
+      taxAmount = Math.round((taxableAmount * (gstRate / 100)) * 100) / 100;
+    } else {
+      taxAmount = 0;
+    }
+    lineTotal = Math.round((taxableAmount + taxAmount) * 100) / 100;
+  }
+
+  // Calculate effective base rate per unit for display
+  const effectiveBaseRate = isTaxInclusive && gstRate > 0
+    ? Math.round((unitPrice / (1 + (gstRate / 100))) * 100) / 100
+    : unitPrice;
+
+  return {
+    rawTotal,
+    discountAmount,
+    taxableAmount,
+    taxAmount,
+    lineTotal,
+    effectiveBaseRate
+  };
 }
 
 export const InvoiceForm: React.FC<InvoiceFormProps> = ({
@@ -117,9 +237,12 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [shipToContact, setShipToContact] = useState<string>('9913402778');
   const [shipToPos, setShipToPos] = useState<string>('24-Gujarat');
 
-  const [isInterState, setIsInterState] = useState<boolean>(false);
+  // Active HSN dropdown index & expanded specs indices
+  const [activeHsnIndex, setActiveHsnIndex] = useState<number | null>(null);
+  const [expandedSpecs, setExpandedSpecs] = useState<Record<number, boolean>>({ 0: true, 1: true });
+  const hsnDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Line items
+  // Line items state
   const [items, setItems] = useState<InvoiceItem[]>([
     {
       particulars: 'Adani 3.30KW Ongrid Solar System',
@@ -128,6 +251,9 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       quantity: 1,
       unit: 'SITE',
       unit_price: 99632.69,
+      is_tax_inclusive: false,
+      discount_type: 'percent',
+      discount_value: 0,
       gst_rate: 5.0
     },
     {
@@ -137,9 +263,23 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       quantity: 1,
       unit: 'SITE',
       unit_price: 42699.72,
+      is_tax_inclusive: false,
+      discount_type: 'percent',
+      discount_value: 0,
       gst_rate: 18.0
     }
   ]);
+
+  // Close HSN dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (hsnDropdownRef.current && !hsnDropdownRef.current.contains(event.target as Node)) {
+        setActiveHsnIndex(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Load leads and initial sequence
   useEffect(() => {
@@ -202,12 +342,17 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       if (inv.items && inv.items.length > 0) {
         setItems(inv.items.map((it: InvoiceItem) => ({
           particulars: it.particulars || it.product_name || '',
+          item_code: it.item_code || '',
           description: it.description || '',
           hsn_sac: it.hsn_sac || '8541',
           quantity: it.quantity || 1,
           unit: it.unit || 'SITE',
           unit_price: it.unit_price || 0,
-          gst_rate: it.gst_rate || 18.0
+          is_tax_inclusive: Boolean(it.is_tax_inclusive),
+          discount_type: it.discount_type || 'percent',
+          discount_value: it.discount_value || 0,
+          discount_amount: it.discount_amount || 0,
+          gst_rate: it.gst_rate ?? 18.0
         })));
       }
     } catch (err: any) {
@@ -228,7 +373,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       setShipToAddress(lead.address ? `${lead.address}, ${lead.city || ''}`.trim() : '');
       setShipToContact(lead.phone || '');
 
-      // If Bill To is empty or matches previous lead, auto fill Bill To as well
+      // If Bill To is empty or default, autofill
       if (!billToName || billToName === 'POWERSHINE ENERGY') {
         setBillToName(lead.full_name || '');
         setBillToAddress(lead.address ? `${lead.address}, ${lead.city || ''}`.trim() : '');
@@ -255,9 +400,26 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
         quantity: 1,
         unit: 'NOS',
         unit_price: 0,
+        is_tax_inclusive: false,
+        discount_type: 'percent',
+        discount_value: 0,
         gst_rate: 18.0
       }
     ]);
+    setExpandedSpecs(prev => ({ ...prev, [items.length]: true }));
+  };
+
+  const handleDuplicateItem = (index: number) => {
+    const itemToClone = items[index];
+    setItems(prev => {
+      const updated = [...prev];
+      updated.splice(index + 1, 0, {
+        ...itemToClone,
+        particulars: `${itemToClone.particulars} (Copy)`
+      });
+      return updated;
+    });
+    setExpandedSpecs(prev => ({ ...prev, [index + 1]: true }));
   };
 
   const handleItemChange = (index: number, field: keyof InvoiceItem, value: any) => {
@@ -276,6 +438,18 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
     setItems(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Set all items to either Tax Inclusive or Tax Exclusive
+  const handleSetAllRateMode = (inclusive: boolean) => {
+    setItems(prev => prev.map(item => ({ ...item, is_tax_inclusive: inclusive })));
+  };
+
+  // Apply HSN selection to a row
+  const handleSelectHsn = (index: number, suggestion: HsnSuggestion) => {
+    handleItemChange(index, 'hsn_sac', suggestion.code);
+    handleItemChange(index, 'gst_rate', suggestion.defaultGst);
+    setActiveHsnIndex(null);
+  };
+
   // Preset buttons
   const addPresetItem = (presetType: string) => {
     if (presetType === 'adani_system') {
@@ -288,6 +462,9 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
           quantity: 1,
           unit: 'SITE',
           unit_price: 99632.69,
+          is_tax_inclusive: false,
+          discount_type: 'percent',
+          discount_value: 0,
           gst_rate: 5.0
         }
       ]);
@@ -296,11 +473,14 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
         ...prev,
         {
           particulars: 'Adani 3.30KW Solar Structure And Installation',
-          description: 'BOS Kit',
+          description: 'BOS Kit & HDGI Fasteners',
           hsn_sac: '9987',
           quantity: 1,
           unit: 'SITE',
           unit_price: 42699.72,
+          is_tax_inclusive: false,
+          discount_type: 'percent',
+          discount_value: 0,
           gst_rate: 18.0
         }
       ]);
@@ -314,6 +494,9 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
           quantity: 1,
           unit: 'NOS',
           unit_price: 48000.00,
+          is_tax_inclusive: false,
+          discount_type: 'percent',
+          discount_value: 0,
           gst_rate: 12.0
         }
       ]);
@@ -327,29 +510,69 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
           quantity: 1,
           unit: 'SET',
           unit_price: 18500.00,
+          is_tax_inclusive: false,
+          discount_type: 'percent',
+          discount_value: 0,
+          gst_rate: 18.0
+        }
+      ]);
+    } else if (presetType === 'cables') {
+      setItems(prev => [
+        ...prev,
+        {
+          particulars: 'Solar DC Cable 4 sq mm (Red & Black)',
+          description: 'UV Protected, XLPO Insulated Annealed Tinned Copper Conductor',
+          hsn_sac: '8544',
+          quantity: 100,
+          unit: 'MTR',
+          unit_price: 45.00,
+          is_tax_inclusive: false,
+          discount_type: 'percent',
+          discount_value: 0,
           gst_rate: 18.0
         }
       ]);
     }
   };
 
-  // Live Calculations
+  // Toggle specification visibility
+  const toggleSpecs = (index: number) => {
+    setExpandedSpecs(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+
+  // Live Calculations across items
+  let totalRaw = 0;
+  let totalDiscount = 0;
   let subtotal = 0;
   let totalTax = 0;
+  let totalQuantity = 0;
+
   items.forEach(item => {
-    const qty = Number(item.quantity) || 0;
-    const price = Number(item.unit_price) || 0;
-    const taxable = Math.round(qty * price * 100) / 100;
-    const rate = Number(item.gst_rate) || 0;
-    const tax = Math.round(taxable * (rate / 100) * 100) / 100;
-    subtotal += taxable;
-    totalTax += tax;
+    const math = computeItemMath(item);
+    totalRaw += math.rawTotal;
+    totalDiscount += math.discountAmount;
+    subtotal += math.taxableAmount;
+    totalTax += math.taxAmount;
+    totalQuantity += Number(item.quantity) || 0;
   });
 
-  const rawTotal = subtotal + totalTax;
+  subtotal = Math.round(subtotal * 100) / 100;
+  totalTax = Math.round(totalTax * 100) / 100;
+  totalDiscount = Math.round(totalDiscount * 100) / 100;
+
+  const rawTotal = Math.round((subtotal + totalTax) * 100) / 100;
   const roundedTotal = Math.round(rawTotal);
   const roundOff = Math.round((roundedTotal - rawTotal) * 100) / 100;
   const wordsDisplay = convertToIndianWords(roundedTotal);
+
+  // Auto detect Intra-state (Gujarat 24 to 24) vs Inter-state (IGST)
+  const isInterState = !(billToPos || shipToPos || '24').trim().startsWith('24');
+  const cgstAmount = isInterState ? 0 : Math.round((totalTax / 2) * 100) / 100;
+  const sgstAmount = isInterState ? 0 : Math.round((totalTax - cgstAmount) * 100) / 100;
+  const igstAmount = isInterState ? totalTax : 0;
 
   // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -390,11 +613,15 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
       items: items.map((it, idx) => ({
         particulars: it.particulars.trim(),
+        item_code: it.item_code?.trim() || undefined,
         description: it.description?.trim() || undefined,
         hsn_sac: it.hsn_sac || '8541',
         quantity: Number(it.quantity) || 1,
         unit: it.unit || 'NOS',
         unit_price: Number(it.unit_price) || 0,
+        is_tax_inclusive: Boolean(it.is_tax_inclusive),
+        discount_type: it.discount_type || 'percent',
+        discount_value: Number(it.discount_value) || 0,
         gst_rate: Number(it.gst_rate) || 0,
         sort_order: idx + 1
       }))
@@ -426,7 +653,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-5xl mx-auto pb-16 animate-fade-in">
-      {/* Header bar */}
+      {/* Top Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-[#0e1712] border border-[#1e3423] shadow-lg">
         <div className="flex items-center gap-3">
           <button
@@ -439,10 +666,17 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
           </button>
           <div className="h-5 w-px bg-[#1e3423]" />
           <div>
-            <h2 className="text-base font-bold text-white">
-              {isEdit ? `Edit Invoice: ${invoiceNumber}` : 'Create New Tax Invoice'}
-            </h2>
-            <p className="text-[11px] text-slate-400">Reference standard: TrueSun Energy INV-021</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-white">
+                {isEdit ? `Edit Invoice: ${invoiceNumber}` : 'Create New GST Tax Invoice'}
+              </h2>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FEC426]/10 text-[#FEC426] border border-[#FEC426]/30">
+                Hitech Grid
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Tax Inclusive/Exclusive rates &bull; HSN Lookup &bull; Per-Item Discounts &bull; Multi-Unit UQC
+            </p>
           </div>
         </div>
 
@@ -469,21 +703,27 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       )}
 
       {/* Snapshot Issuer Alert */}
-      <div className="p-4 rounded-2xl bg-[#0a120c] border border-[#1e3423] flex items-center justify-between text-xs text-slate-300">
+      <div className="p-4 rounded-2xl bg-[#0a120c] border border-[#1e3423] flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-[#106828]/20 border border-[#106828]/40 text-[#FEC426]">
             <Building2 className="w-4 h-4" />
           </div>
           <div>
-            <p className="font-bold text-white">Invoicing as TRUESUN ENERGY</p>
+            <p className="font-bold text-white">Invoicing as TRUESUN ENERGY (Gujarat - 24)</p>
             <p className="text-slate-400 text-[11px]">
               GSTIN: 24EIVPG5500C1ZI &bull; Bank: State Bank of India (A/C: 44474952500, IFSC: SBIN0003268)
             </p>
           </div>
         </div>
-        <span className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full font-semibold">
-          Company Snapshot Locked
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`text-[11px] px-3 py-1 rounded-full font-semibold border ${
+            isInterState 
+              ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' 
+              : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+          }`}>
+            {isInterState ? 'Inter-State (IGST 100%)' : 'Intra-State (CGST 50% + SGST 50%)'}
+          </span>
+        </div>
       </div>
 
       {/* Top Details Grid */}
@@ -619,7 +859,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
             <button
               type="button"
               onClick={copyBillToToShipTo}
-              className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold"
+              className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold cursor-pointer"
             >
               <Copy className="w-3 h-3" />
               <span>Copy from Bill To</span>
@@ -674,81 +914,165 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
         </div>
       </div>
 
-      {/* Invoice Items Table Section */}
-      <div className="p-5 rounded-2xl bg-[#0e1712] border border-[#1e3423] space-y-4">
+      {/* ===================================================================== */}
+      {/* 5. ENHANCED HITECH ITEM BILLING GRID SECTION */}
+      {/* ===================================================================== */}
+      <div className="p-5 rounded-2xl bg-[#0e1712] border border-[#1e3423] space-y-4 shadow-xl">
+        {/* Toolbar Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#1e3423]">
           <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-emerald-400" />
-              <span>Invoice Line Items</span>
-            </h3>
-            <p className="text-[11px] text-slate-400">Add equipment, serial numbers, solar panels, and structure line items</p>
+              <h3 className="text-sm font-bold text-white">Item Billing Grid</h3>
+              <span className="text-[11px] text-slate-400 bg-white/5 px-2.5 py-0.5 rounded-full border border-white/10">
+                {items.length} items &bull; Total Qty: {totalQuantity}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Hitech BillSoft grid: Tax Inclusive/Exclusive rate switch, discount (%/₹), HSN lookup, and multi-unit support
+            </p>
           </div>
 
-          {/* Quick preset buttons */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] text-slate-400 mr-1 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-[#FEC426]" /> Presets:
-            </span>
-            <button
-              type="button"
-              onClick={() => addPresetItem('adani_system')}
-              className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold cursor-pointer transition-colors"
-            >
-              + Adani 3.30kW System
-            </button>
-            <button
-              type="button"
-              onClick={() => addPresetItem('structure')}
-              className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold cursor-pointer transition-colors"
-            >
-              + Structure & BOS
-            </button>
-            <button
-              type="button"
-              onClick={() => addPresetItem('inverter')}
-              className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold cursor-pointer transition-colors"
-            >
-              + 5kW Inverter
-            </button>
-            <button
-              type="button"
-              onClick={() => addPresetItem('bos')}
-              className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold cursor-pointer transition-colors"
-            >
-              + BOS Kit
-            </button>
+          {/* Quick Rate Mode Switcher for All Rows */}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-400">All Rows:</span>
+            <div className="inline-flex rounded-xl bg-[#142318] border border-[#1e3423] p-0.5 text-[10.5px]">
+              <button
+                type="button"
+                onClick={() => handleSetAllRateMode(false)}
+                className="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white font-semibold transition-colors cursor-pointer"
+                title="Rates are before GST (Tax Exclusive)"
+              >
+                Tax Exclusive
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetAllRateMode(true)}
+                className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-500/30 transition-colors cursor-pointer"
+                title="Rates include GST (Tax Inclusive / MRP)"
+              >
+                Tax Inclusive (MRP)
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Item Rows */}
-        <div className="space-y-3">
+        {/* Quick Presets Bar */}
+        <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-[#0a120c] border border-[#1e3423]/60 text-xs">
+          <span className="text-[11px] text-slate-400 mr-1 flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-[#FEC426]" /> Quick Presets:
+          </span>
+          <button
+            type="button"
+            onClick={() => addPresetItem('adani_system')}
+            className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold cursor-pointer transition-colors"
+          >
+            + Adani 3.30kW System (5%)
+          </button>
+          <button
+            type="button"
+            onClick={() => addPresetItem('structure')}
+            className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold cursor-pointer transition-colors"
+          >
+            + Structure & Installation (18%)
+          </button>
+          <button
+            type="button"
+            onClick={() => addPresetItem('inverter')}
+            className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold cursor-pointer transition-colors"
+          >
+            + 5kW Inverter (12%)
+          </button>
+          <button
+            type="button"
+            onClick={() => addPresetItem('bos')}
+            className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold cursor-pointer transition-colors"
+          >
+            + BOS Kit (18%)
+          </button>
+          <button
+            type="button"
+            onClick={() => addPresetItem('cables')}
+            className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold cursor-pointer transition-colors"
+          >
+            + DC Cables (18%)
+          </button>
+        </div>
+
+        {/* Line Item Cards */}
+        <div className="space-y-3.5">
           {items.map((item, idx) => {
-            const itemQty = Number(item.quantity) || 0;
-            const itemPrice = Number(item.unit_price) || 0;
-            const itemTaxable = Math.round(itemQty * itemPrice * 100) / 100;
+            const math = computeItemMath(item);
+            const isSpecsOpen = expandedSpecs[idx] ?? false;
+            const isHsnOpen = activeHsnIndex === idx;
+
+            // Filter HSN Suggestions based on current input
+            const filteredHsn = HSN_DATABASE.filter(h =>
+              h.code.includes(item.hsn_sac || '') ||
+              h.category.toLowerCase().includes((item.hsn_sac || '').toLowerCase()) ||
+              h.description.toLowerCase().includes((item.hsn_sac || '').toLowerCase())
+            );
 
             return (
               <div
                 key={idx}
-                className="p-4 rounded-xl bg-[#0a120c] border border-[#1e3423] space-y-3"
+                className="p-4 rounded-xl bg-[#0a120c] border border-[#1e3423] space-y-3 relative hover:border-[#2d4d35] transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-400">Item #{idx + 1}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveItem(idx)}
-                    className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                    title="Remove Item"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                {/* Row Header Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-[#1e3423]/60">
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-[#142318] text-white text-[11px] font-bold border border-[#1e3423]">
+                      #{idx + 1}
+                    </span>
+                    <span className="text-xs font-bold text-white truncate max-w-[280px]">
+                      {item.particulars || 'New Product / Line Item'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Rate Mode Toggle Chip */}
+                    <button
+                      type="button"
+                      onClick={() => handleItemChange(idx, 'is_tax_inclusive', !item.is_tax_inclusive)}
+                      className={`px-2.5 py-1 rounded-lg text-[10.5px] font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                        item.is_tax_inclusive
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                          : 'bg-slate-800/60 text-slate-300 border-slate-700 hover:border-slate-500'
+                      }`}
+                      title="Click to toggle between Tax Exclusive and Tax Inclusive (MRP) pricing"
+                    >
+                      <Tag className="w-3 h-3" />
+                      <span>{item.is_tax_inclusive ? 'Tax Inclusive (MRP)' : 'Tax Exclusive (Base)'}</span>
+                    </button>
+
+                    {/* Duplicate Row */}
+                    <button
+                      type="button"
+                      onClick={() => handleDuplicateItem(idx)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 transition-colors cursor-pointer"
+                      title="Duplicate this line item"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Remove Row */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(idx)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer"
+                      title="Delete item"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
+                {/* Primary Row Grid: Name, HSN, Qty, Unit */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                  <div className="md:col-span-5">
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                      Product / Service Name *
+                  {/* Particulars / Product Name */}
+                  <div className="md:col-span-6">
+                    <label className="block text-[10.5px] font-semibold text-slate-400 mb-1">
+                      Product / Particulars *
                     </label>
                     <input
                       type="text"
@@ -756,25 +1080,81 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                       placeholder="e.g. Adani 3.30KW Ongrid Solar System"
                       value={item.particulars}
                       onChange={(e) => handleItemChange(idx, 'particulars', e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-lg bg-[#142318] border border-[#1e3423] text-white text-xs font-bold focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3 py-2 rounded-xl bg-[#142318] border border-[#1e3423] text-white text-xs font-bold focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                      HSN/SAC
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="8541"
-                      value={item.hsn_sac}
-                      onChange={(e) => handleItemChange(idx, 'hsn_sac', e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-[#142318] border border-[#1e3423] text-white text-xs font-mono text-center focus:outline-none focus:border-emerald-500"
-                    />
+                  {/* HSN / SAC with Auto-Lookup Popover */}
+                  <div className="md:col-span-3 relative">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10.5px] font-semibold text-slate-400 flex items-center gap-1">
+                        <span>HSN / SAC</span>
+                        <Search className="w-2.5 h-2.5 text-emerald-400" />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setActiveHsnIndex(isHsnOpen ? null : idx)}
+                        className="text-[9.5px] text-emerald-400 hover:underline cursor-pointer"
+                      >
+                        {isHsnOpen ? 'Close list' : 'Lookup'}
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="8541"
+                        value={item.hsn_sac}
+                        onFocus={() => setActiveHsnIndex(idx)}
+                        onChange={(e) => handleItemChange(idx, 'hsn_sac', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#142318] border border-[#1e3423] text-white text-xs font-mono font-bold focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    {/* HSN Suggestions Dropdown */}
+                    {isHsnOpen && (
+                      <div
+                        ref={hsnDropdownRef}
+                        className="absolute left-0 top-full mt-1.5 w-72 max-h-56 overflow-y-auto z-40 bg-[#0e1712] border border-emerald-500/40 rounded-xl shadow-2xl p-2 space-y-1"
+                      >
+                        <div className="px-2 py-1 text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-[#1e3423] flex justify-between">
+                          <span>Select Solar HSN Code</span>
+                          <span>GST %</span>
+                        </div>
+                        {filteredHsn.length > 0 ? (
+                          filteredHsn.map((hsn) => (
+                            <button
+                              key={hsn.code}
+                              type="button"
+                              onClick={() => handleSelectHsn(idx, hsn)}
+                              className="w-full text-left p-1.5 rounded-lg hover:bg-emerald-500/10 hover:border-emerald-500/30 border border-transparent flex items-center justify-between gap-2 text-xs transition-colors cursor-pointer group"
+                            >
+                              <div>
+                                <span className="font-mono font-bold text-white group-hover:text-emerald-400 mr-1.5">
+                                  {hsn.code}
+                                </span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-300">
+                                  {hsn.category}
+                                </span>
+                                <p className="text-[10px] text-slate-400 line-clamp-1">{hsn.description}</p>
+                              </div>
+                              <span className="font-bold text-emerald-400 font-mono text-xs">
+                                {hsn.defaultGst}%
+                              </span>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-2 text-xs text-slate-400 text-center">
+                            No match found. Free entry preserved.
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
+                  {/* Quantity */}
                   <div className="md:col-span-1">
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    <label className="block text-[10.5px] font-semibold text-slate-400 mb-1">
                       Qty
                     </label>
                     <input
@@ -784,30 +1164,43 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                       required
                       value={item.quantity}
                       onChange={(e) => handleItemChange(idx, 'quantity', parseFloat(e.target.value) || 0)}
-                      className="w-full px-2 py-1.5 rounded-lg bg-[#142318] border border-[#1e3423] text-white text-xs text-center focus:outline-none focus:border-emerald-500 font-bold"
+                      className="w-full px-2 py-2 rounded-xl bg-[#142318] border border-[#1e3423] text-white text-xs text-center font-mono font-bold focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
-                  <div className="md:col-span-1">
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                      Unit
+                  {/* Multi-Unit Selector (Standard Indian UQC) */}
+                  <div className="md:col-span-2">
+                    <label className="block text-[10.5px] font-semibold text-slate-400 mb-1">
+                      Unit (UQC)
                     </label>
                     <select
                       value={item.unit}
                       onChange={(e) => handleItemChange(idx, 'unit', e.target.value)}
-                      className="w-full px-1 py-1.5 rounded-lg bg-[#142318] border border-[#1e3423] text-white text-[11px] focus:outline-none focus:border-emerald-500"
+                      className="w-full px-2.5 py-2 rounded-xl bg-[#142318] border border-[#1e3423] text-white text-xs font-semibold focus:outline-none focus:border-emerald-500"
                     >
-                      <option value="SITE">SITE</option>
-                      <option value="NOS">NOS</option>
-                      <option value="SET">SET</option>
-                      <option value="KW">KW</option>
+                      {GST_UNITS.map(u => (
+                        <option key={u.code} value={u.code}>
+                          {u.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
+                </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                      Unit Price (₹)
-                    </label>
+                {/* Secondary Row Grid: Rate, Discount, Taxable, GST %, Tax Amount, Line Total */}
+                <div className="grid grid-cols-2 md:grid-cols-12 gap-3 pt-1">
+                  {/* Rate / Unit Price */}
+                  <div className="col-span-1 md:col-span-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10.5px] font-semibold text-slate-400">
+                        {item.is_tax_inclusive ? 'Price (MRP Incl.) ₹' : 'Base Rate (Excl.) ₹'}
+                      </label>
+                      {item.is_tax_inclusive && (
+                        <span className="text-[9.5px] text-emerald-400 font-mono">
+                          Base: ₹{math.effectiveBaseRate.toLocaleString('en-IN')}
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="number"
                       step="0.01"
@@ -815,67 +1208,151 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                       required
                       value={item.unit_price}
                       onChange={(e) => handleItemChange(idx, 'unit_price', parseFloat(e.target.value) || 0)}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-[#142318] border border-[#1e3423] text-white text-xs text-right font-mono focus:outline-none focus:border-emerald-500 font-bold"
+                      className="w-full px-3 py-2 rounded-xl bg-[#142318] border border-[#1e3423] text-white text-xs font-mono font-bold focus:outline-none focus:border-emerald-500 text-right"
                     />
                   </div>
 
-                  <div className="md:col-span-1">
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                  {/* Discount (% or ₹) */}
+                  <div className="col-span-1 md:col-span-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10.5px] font-semibold text-slate-400">
+                        Discount
+                      </label>
+                      {math.discountAmount > 0 && (
+                        <span className="text-[9.5px] text-amber-400 font-mono">
+                          -₹{math.discountAmount.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0"
+                        value={item.discount_value || ''}
+                        onChange={(e) => handleItemChange(idx, 'discount_value', parseFloat(e.target.value) || 0)}
+                        className="w-full px-2.5 py-2 rounded-xl bg-[#142318] border border-[#1e3423] text-white text-xs font-mono font-semibold focus:outline-none focus:border-emerald-500 text-right"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleItemChange(idx, 'discount_type', item.discount_type === 'amount' ? 'percent' : 'amount')}
+                        className={`px-2.5 py-2 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
+                          item.discount_type === 'amount'
+                            ? 'bg-[#FEC426]/10 text-[#FEC426] border-[#FEC426]/30'
+                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        }`}
+                        title="Toggle percentage (%) vs flat amount (₹)"
+                      >
+                        {item.discount_type === 'amount' ? '₹' : '%'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Taxable Amount (Readonly) */}
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="block text-[10.5px] font-semibold text-slate-400 mb-1">
+                      Taxable Value (₹)
+                    </label>
+                    <div className="px-3 py-2 rounded-xl bg-[#080e0a] border border-[#1e3423] text-white text-xs font-mono font-bold text-right truncate">
+                      ₹{math.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+
+                  {/* GST Rate */}
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="block text-[10.5px] font-semibold text-slate-400 mb-1">
                       GST %
                     </label>
                     <select
                       value={item.gst_rate}
                       onChange={(e) => handleItemChange(idx, 'gst_rate', parseFloat(e.target.value) || 0)}
-                      className="w-full px-1 py-1.5 rounded-lg bg-[#142318] border border-[#1e3423] text-white text-xs text-center font-bold focus:outline-none focus:border-emerald-500"
+                      className="w-full px-2 py-2 rounded-xl bg-[#142318] border border-[#1e3423] text-white text-xs font-bold focus:outline-none focus:border-emerald-500 text-center"
                     >
-                      <option value="0">0%</option>
-                      <option value="5">5%</option>
-                      <option value="12">12%</option>
-                      <option value="18">18%</option>
-                      <option value="28">28%</option>
+                      <option value="0">0% (Nil)</option>
+                      <option value="5">5% (Solar PV)</option>
+                      <option value="12">12% (Inverter)</option>
+                      <option value="18">18% (Service/BOS)</option>
+                      <option value="28">28% (Battery/Luxury)</option>
                     </select>
+                  </div>
+
+                  {/* Line Total */}
+                  <div className="col-span-2 md:col-span-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10.5px] font-semibold text-slate-400">
+                        Line Total (₹)
+                      </label>
+                      <span className="text-[9.5px] text-slate-400 font-mono">
+                        Tax: ₹{math.taxAmount.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="px-3 py-2 rounded-xl bg-[#142318] border border-[#1e3423] text-[#FEC426] text-xs font-mono font-extrabold text-right truncate shadow-inner">
+                      ₹{math.lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
                   </div>
                 </div>
 
-                {/* Multiline description for panel and inverter serial numbers */}
-                <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                    Equipment Specifications & Serial Numbers (Multi-line)
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="e.g. Panels :- Adani 550 * 6 NOS&#10;MS2607202B3016&#10;Inverter :- Polycab 3.6KW&#10;SN : 3K6050826..."
-                    value={item.description || ''}
-                    onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-lg bg-[#142318] border border-[#1e3423] text-white text-xs font-mono focus:outline-none placeholder-slate-600"
-                  />
-                </div>
+                {/* Equipment Specifications & Multi-line Serial Numbers (Collapsible) */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleSpecs(idx)}
+                    className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-emerald-400 font-semibold cursor-pointer transition-colors"
+                  >
+                    {isSpecsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    <span>Equipment Specifications & Serial Numbers</span>
+                    {item.description ? (
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    ) : null}
+                  </button>
 
-                <div className="text-right text-xs text-slate-400">
-                  Taxable Amount: <span className="text-white font-bold font-mono">₹{itemTaxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  {isSpecsOpen && (
+                    <div className="mt-2 animate-fade-in">
+                      <textarea
+                        rows={2}
+                        placeholder="e.g. Panels :- Adani 550 * 6 NOS&#10;MS2607202B3016&#10;Inverter :- Polycab 3.6KW (SN: 3K6050826-2625)..."
+                        value={item.description || ''}
+                        onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#142318] border border-[#1e3423] text-white text-xs font-mono focus:outline-none focus:border-emerald-500 placeholder-slate-600 leading-relaxed"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
 
-        <button
-          type="button"
-          onClick={handleAddItem}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#142318] hover:bg-[#1a2f20] border border-[#1e3423] text-white text-xs font-semibold cursor-pointer transition-colors"
-        >
-          <Plus className="w-4 h-4 text-emerald-400" />
-          <span>Add Custom Line Item</span>
-        </button>
+        {/* Add Row Button & Live Subtotal summary */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <button
+            type="button"
+            onClick={handleAddItem}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#106828] to-[#147a2f] hover:from-[#158032] hover:to-[#1e9a3d] border border-emerald-500/30 text-white text-xs font-bold cursor-pointer transition-all shadow-md"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Line Item</span>
+          </button>
+
+          <span className="text-[11px] text-slate-400 font-mono">
+            Subtotal: ₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          </span>
+        </div>
       </div>
 
-      {/* Calculations & Words Live Summary */}
+      {/* ===================================================================== */}
+      {/* 6. CALCULATIONS & WORDS LIVE SUMMARY (Hitech Format) */}
+      {/* ===================================================================== */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-2xl bg-[#0e1712] border border-[#1e3423] shadow-lg">
         {/* Left: Terms and Amount in Words */}
         <div className="space-y-4">
           <div>
-            <p className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Amount in Words (Calculated Automatically):</p>
-            <div className="p-3.5 rounded-xl bg-[#0a120c] border border-[#1e3423] text-xs font-bold text-[#FEC426] leading-relaxed">
+            <p className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Amount in Words (Auto Generated):</span>
+            </p>
+            <div className="p-3.5 rounded-xl bg-[#0a120c] border border-[#1e3423] text-xs font-bold text-[#FEC426] leading-relaxed shadow-inner">
               {wordsDisplay}
             </div>
           </div>
@@ -887,7 +1364,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                 type="text"
                 value={paymentTerms}
                 onChange={(e) => setPaymentTerms(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg bg-[#142318] border border-[#1e3423] text-white text-xs focus:outline-none"
+                className="w-full px-3 py-1.5 rounded-xl bg-[#142318] border border-[#1e3423] text-white text-xs focus:outline-none"
               />
             </div>
             <div>
@@ -896,7 +1373,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                 type="text"
                 value={deliveryTerms}
                 onChange={(e) => setDeliveryTerms(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg bg-[#142318] border border-[#1e3423] text-white text-xs focus:outline-none"
+                className="w-full px-3 py-1.5 rounded-xl bg-[#142318] border border-[#1e3423] text-white text-xs focus:outline-none"
               />
             </div>
           </div>
@@ -907,30 +1384,56 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
               type="text"
               value={termsAndConditions}
               onChange={(e) => setTermsAndConditions(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-lg bg-[#142318] border border-[#1e3423] text-white text-xs focus:outline-none"
+              className="w-full px-3 py-1.5 rounded-xl bg-[#142318] border border-[#1e3423] text-white text-xs focus:outline-none"
             />
           </div>
         </div>
 
         {/* Right: Financial Totals Breakdown */}
         <div className="p-5 rounded-xl bg-[#0a120c] border border-[#1e3423] space-y-3">
-          <p className="text-xs font-bold text-white uppercase tracking-wider pb-2 border-b border-[#1e3423]">
-            Summary Financial Calculations
+          <p className="text-xs font-bold text-white uppercase tracking-wider pb-2 border-b border-[#1e3423] flex items-center justify-between">
+            <span>Summary Financial Calculations</span>
+            <span className="text-[10px] text-slate-400 font-normal">Standard Indian GST</span>
           </p>
 
           <div className="flex justify-between text-xs text-slate-300">
-            <span>Sub Total (Taxable Amount):</span>
+            <span>Total Gross Price:</span>
+            <span className="font-mono font-medium text-slate-300">₹{totalRaw.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+
+          {totalDiscount > 0 && (
+            <div className="flex justify-between text-xs text-amber-400">
+              <span>Item Discounts (-):</span>
+              <span className="font-mono font-bold">-₹{totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          )}
+
+          <div className="flex justify-between text-xs text-slate-300">
+            <span>Taxable Amount (Sub Total):</span>
             <span className="font-mono font-bold text-white">₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
 
-          <div className="flex justify-between text-xs text-slate-300">
-            <span>GST Amount (+):</span>
-            <span className="font-mono font-bold text-emerald-400">₹{totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          </div>
+          {!isInterState ? (
+            <>
+              <div className="flex justify-between text-xs text-slate-400 pl-3 border-l-2 border-emerald-500/40">
+                <span>CGST (Central Tax):</span>
+                <span className="font-mono text-emerald-400">₹{cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-xs text-slate-400 pl-3 border-l-2 border-emerald-500/40">
+                <span>SGST (State Tax):</span>
+                <span className="font-mono text-emerald-400">₹{sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between text-xs text-slate-400 pl-3 border-l-2 border-amber-500/40">
+              <span>IGST (Integrated Inter-State Tax):</span>
+              <span className="font-mono text-amber-400">₹{igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          )}
 
           <div className="flex justify-between text-xs text-slate-300">
             <span>Round Off Adjustment ({roundOff >= 0 ? '+' : '-'}):</span>
-            <span className="font-mono font-bold text-slate-300">₹{Math.abs(roundOff).toFixed(2)}</span>
+            <span className="font-mono font-medium text-slate-300">₹{Math.abs(roundOff).toFixed(2)}</span>
           </div>
 
           <div className="pt-3 border-t border-[#1e3423] flex items-center justify-between">

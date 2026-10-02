@@ -339,7 +339,17 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
                     {item.quantity} {item.unit || 'NOS'}
                   </td>
                   <td className="py-2 px-2 text-right border-r border-black font-medium">
-                    ₹{item.unit_price?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <div>
+                      ₹{item.unit_price?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {item.is_tax_inclusive && (
+                        <span className="block text-[8.5px] text-slate-600 font-normal">(Tax Incl.)</span>
+                      )}
+                      {Boolean(item.discount_amount && item.discount_amount > 0) && (
+                        <span className="block text-[8.5px] text-amber-700 font-medium">
+                          Disc: -₹{item.discount_amount?.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-2 px-2 text-center border-r border-black font-medium">{item.gst_rate}%</td>
                   <td className="py-2 px-3 text-right font-bold text-black">

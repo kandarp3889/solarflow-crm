@@ -507,6 +507,7 @@ export interface InvoiceItem {
   id?: number;
   invoice_id?: number;
   sort_order?: number;
+  item_code?: string;
   particulars: string;
   product_name?: string;
   description?: string;
@@ -514,6 +515,10 @@ export interface InvoiceItem {
   quantity: number;
   unit: string;
   unit_price: number;
+  is_tax_inclusive?: boolean;
+  discount_type?: 'percent' | 'amount';
+  discount_value?: number;
+  discount_amount?: number;
   gst_rate: number;
   taxable_amount?: number;
   cgst_rate?: number;

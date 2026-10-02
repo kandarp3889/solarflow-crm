@@ -697,12 +697,17 @@ class InvoiceSettingsResponse(InvoiceSettingsBase):
 
 
 class InvoiceItemBase(BaseModel):
+    item_code: Optional[str] = None
     particulars: str
     description: Optional[str] = None
     hsn_sac: Optional[str] = "8541"
     quantity: float = 1.0
     unit: str = "SITE"
     unit_price: float = 0.0
+    is_tax_inclusive: Optional[bool] = False
+    discount_type: Optional[str] = "percent" # percent, amount
+    discount_value: Optional[float] = 0.0
+    discount_amount: Optional[float] = 0.0
     gst_rate: float = 18.0
 
 class InvoiceItemCreate(InvoiceItemBase):

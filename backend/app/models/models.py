@@ -649,13 +649,18 @@ class InvoiceItem(Base):
     invoice_id = Column(Integer, ForeignKey("invoices.id", ondelete="CASCADE"), nullable=False, index=True)
     sort_order = Column(Integer, default=1)
 
+    item_code = Column(String(50), nullable=True)
     particulars = Column(String(500), nullable=False)
     description = Column(Text, nullable=True) # Multiline panel serial numbers, inverter brand/SN, etc.
     hsn_sac = Column(String(20), default="8541")
     quantity = Column(Float, default=1.0)
-    unit = Column(String(20), default="SITE") # SITE, NOS, SET, KW
+    unit = Column(String(20), default="SITE") # SITE, NOS, SET, KW, WATT, PCS, MTR, KG, BOX, LOT, HRS, JOB
     unit_price = Column(Float, default=0.0)
-    gst_rate = Column(Float, default=18.0) # 5%, 12%, 18%, 28%
+    is_tax_inclusive = Column(Boolean, default=False)
+    discount_type = Column(String(20), default="percent") # percent, amount
+    discount_value = Column(Float, default=0.0)
+    discount_amount = Column(Float, default=0.0)
+    gst_rate = Column(Float, default=18.0) # 0%, 5%, 12%, 18%, 28%
 
     taxable_amount = Column(Float, default=0.0)
     cgst_rate = Column(Float, default=0.0)

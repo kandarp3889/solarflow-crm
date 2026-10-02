@@ -202,38 +202,77 @@ def calculate_invoice_financials(
         rate = float(item.unit_price)
         gst_pct = float(item.gst_rate)
         hsn = (item.hsn_sac or "8541").strip()
+        is_tax_incl = bool(getattr(item, "is_tax_inclusive", False))
+        disc_type = getattr(item, "discount_type", "percent") or "percent"
+        disc_val = float(getattr(item, "discount_value", 0.0) or 0.0)
+        item_code = getattr(item, "item_code", None)
 
-        taxable = round(qty * rate, 2)
+        if is_tax_incl:
+            # Entered rate includes GST (Hitech Retail / MRP mode)
+            gross_raw = round(qty * rate, 2)
+            if disc_type == "percent":
+                disc_amt = round(gross_raw * (disc_val / 100.0), 2)
+            else:
+                disc_amt = round(disc_val, 2)
+            disc_amt = min(gross_raw, max(0.0, disc_amt))
+            gross_after_disc = round(gross_raw - disc_amt, 2)
+
+            # Reverse calculate taxable amount: Taxable = Gross / (1 + GST% / 100)
+            if gst_pct > 0:
+                taxable = round(gross_after_disc / (1.0 + (gst_pct / 100.0)), 2)
+                tax_for_item = round(gross_after_disc - taxable, 2)
+            else:
+                taxable = gross_after_disc
+                tax_for_item = 0.0
+
+            line_total = gross_after_disc
+        else:
+            # Standard Tax Exclusive: Entered rate is base price
+            base_raw = round(qty * rate, 2)
+            if disc_type == "percent":
+                disc_amt = round(base_raw * (disc_val / 100.0), 2)
+            else:
+                disc_amt = round(disc_val, 2)
+            disc_amt = min(base_raw, max(0.0, disc_amt))
+            taxable = round(base_raw - disc_amt, 2)
+
+            if gst_pct > 0:
+                tax_for_item = round(taxable * (gst_pct / 100.0), 2)
+            else:
+                tax_for_item = 0.0
+            line_total = round(taxable + tax_for_item, 2)
+
         subtotal += taxable
+        total_tax += tax_for_item
 
         if is_intra_state:
             cgst_rate = round(gst_pct / 2.0, 2)
             sgst_rate = round(gst_pct / 2.0, 2)
             igst_rate = 0.0
-            cgst_amt = round(taxable * (cgst_rate / 100.0), 2)
-            sgst_amt = round(taxable * (sgst_rate / 100.0), 2)
+            cgst_amt = round(tax_for_item / 2.0, 2) if is_tax_incl else round(taxable * (cgst_rate / 100.0), 2)
+            sgst_amt = round(tax_for_item - cgst_amt, 2)
             igst_amt = 0.0
-            tax_for_item = round(cgst_amt + sgst_amt, 2)
         else:
             cgst_rate = 0.0
             sgst_rate = 0.0
             igst_rate = gst_pct
             cgst_amt = 0.0
             sgst_amt = 0.0
-            igst_amt = round(taxable * (igst_rate / 100.0), 2)
-            tax_for_item = igst_amt
-
-        total_tax += tax_for_item
-        line_total = round(taxable + tax_for_item, 2)
+            igst_amt = tax_for_item
 
         item_dict = {
             "sort_order": idx,
+            "item_code": item_code,
             "particulars": item.particulars,
             "description": item.description,
             "hsn_sac": hsn,
             "quantity": qty,
             "unit": item.unit or "SITE",
             "unit_price": rate,
+            "is_tax_inclusive": is_tax_incl,
+            "discount_type": disc_type,
+            "discount_value": disc_val,
+            "discount_amount": disc_amt,
             "gst_rate": gst_pct,
             "taxable_amount": taxable,
             "cgst_rate": cgst_rate,

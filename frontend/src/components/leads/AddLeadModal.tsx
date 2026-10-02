@@ -56,16 +56,24 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [leadSource, setLeadSource] = useState('');
   const [assignedExecutive, setAssignedExecutive] = useState('');
 
+  const resetForm = () => {
+    setCustomerName('');
+    setMobileNumber('');
+    setEmail('');
+    setConsumerNumber('');
+    setAddress('');
+    setMonthlyBill('');
+    setFollowUpDate('');
+    setState('');
+    setCity('');
+    setRoofOwnership('');
+    setRoofType('');
+    setLeadSource('');
+    setAssignedExecutive('');
+  };
+
   useEffect(() => {
     if (isOpen) {
-      // Set default follow up date to tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const yyyy = tomorrow.getFullYear();
-      const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
-      const dd = String(tomorrow.getDate()).padStart(2, '0');
-      setFollowUpDate(`${yyyy}-${mm}-${dd}`);
-
       // Fetch team executives
       api.getTeam()
         .then((team: any[]) => {
@@ -116,6 +124,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
       };
 
       await api.createLead(payload);
+      resetForm();
       onSuccess();
       onClose();
     } catch (err: any) {

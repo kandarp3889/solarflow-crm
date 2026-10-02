@@ -14,6 +14,15 @@ ADMIN_ROLES = {
     "super_admin"
 }
 
+MANAGEMENT_ROLES = {
+    UserRole.COMPANY_ADMIN.value,
+    UserRole.SUPER_ADMIN.value,
+    UserRole.SALES_MANAGER.value,
+    "company_admin",
+    "super_admin",
+    "sales_manager"
+}
+
 def _get_actor_name(actor: Optional[Union[User, str]]) -> str:
     if isinstance(actor, str):
         return actor
@@ -38,63 +47,80 @@ def dispatch_targeted_notification(
 ) -> List[Notification]:
     """
     Role-specific, targeted notification engine:
-    1. Assigned User / Non-Admin performs an action (e.g. moves lead to Deal Won, updates follow-up):
-       -> In-app notification + Email sent ONLY to the company Admin(s).
-       -> Other team members do NOT receive it.
-       -> Actor does not receive self-notifications.
-    2. Admin performs an action (e.g. moves lead, schedules follow-up):
-       -> In-app notification + Email sent ONLY to the user assigned to that lead.
-       -> Does NOT notify the entire team or other admins.
-    3. Unauthenticated/System event (e.g. incoming website inquiry):
-       -> Notifies company Admin(s) and assigned user (if assigned).
+    1. Assigned User / Non-Admin performs an action:
+       -> In-app notification + Email sent to company Admin(s).
+       -> If assigned to another user, that user also receives it.
+    2. Admin / Manager performs an action:
+       -> If assigned to a sales rep / team member, that member receives it.
+       -> For milestones (Deal Won, New Lead) or unassigned leads, other company admins receive it.
+       -> If actor is the only user or no other recipient exists, logs in-app notification for actor.
+    3. External/System event (incoming inquiry, automated cron):
+       -> Notifies all company admins and assigned user (if any).
     """
     try:
-        is_actor_admin = False
-        actor_id = None
-        if actor:
-            actor_id = actor.id
-            is_actor_admin = actor.role in ADMIN_ROLES
+        actor_id = actor.id if actor else None
+        is_actor_admin = bool(actor and actor.role in ADMIN_ROLES)
+        is_actor_manager = bool(actor and actor.role in MANAGEMENT_ROLES)
 
-        target_users: List[User] = []
+        admins = db.query(User).filter(
+            User.company_id == company_id,
+            User.is_active == True,
+            User.role.in_(ADMIN_ROLES)
+        ).all()
+
+        assigned_user = None
+        if assigned_user_id:
+            assigned_user = db.query(User).filter(
+                User.id == assigned_user_id,
+                User.company_id == company_id,
+                User.is_active == True
+            ).first()
+
+        target_map = {}
 
         if actor is None:
             # System or external intake: notify admins and assigned user (if any)
-            admins = db.query(User).filter(
-                User.company_id == company_id,
-                User.is_active == True,
-                User.role.in_(ADMIN_ROLES)
-            ).all()
-            target_map = {u.id: u for u in admins}
-            if assigned_user_id:
-                rep = db.query(User).filter(
-                    User.id == assigned_user_id,
-                    User.company_id == company_id,
-                    User.is_active == True
-                ).first()
-                if rep:
-                    target_map[rep.id] = rep
-            target_users = list(target_map.values())
+            for u in admins:
+                target_map[u.id] = u
+            if assigned_user:
+                target_map[assigned_user.id] = assigned_user
 
-        elif is_actor_admin:
-            # Requirement 2: Admin performs action -> Send ONLY to the assigned user
-            if assigned_user_id and assigned_user_id != actor_id:
-                rep = db.query(User).filter(
-                    User.id == assigned_user_id,
-                    User.company_id == company_id,
-                    User.is_active == True
-                ).first()
-                if rep:
-                    target_users = [rep]
-            # If no user assigned or assigned to the admin himself, no other team member is notified
+        elif is_actor_admin or is_actor_manager:
+            # Admin or Manager performed the action
+            # 1. If assigned to a team member (and not the actor), notify them
+            if assigned_user and assigned_user.id != actor_id:
+                target_map[assigned_user.id] = assigned_user
+
+            # 2. Check if this is a company milestone or unassigned/self-assigned action
+            is_company_milestone = (
+                category in ["pipeline", "lead", "quotation", "survey"] and
+                any(w in title.lower() or w in message.lower() for w in ["deal won", "won", "new lead", "approved", "completed"])
+            )
+            has_other_rep = bool(assigned_user and assigned_user.id != actor_id)
+
+            # If there's no other rep assigned, or if it's a company milestone: notify other admins
+            if not has_other_rep or is_company_milestone:
+                for u in admins:
+                    if u.id != actor_id:
+                        target_map[u.id] = u
+
+            # 3. Fallback: If no other recipients exist in the system (e.g. sole admin, testing, or self-work),
+            # include actor so in-app notifications and bell activity don't stay completely blank!
+            if not target_map and actor:
+                target_map[actor.id] = actor
+
         else:
-            # Requirement 1: Non-admin assigned user performs action -> Send ONLY to the Admin(s)
-            admins = db.query(User).filter(
-                User.company_id == company_id,
-                User.is_active == True,
-                User.role.in_(ADMIN_ROLES),
-                User.id != actor_id
-            ).all()
-            target_users = admins
+            # Non-admin (Sales rep, survey engineer, installer) performed the action
+            # 1. Notify company admins (excluding actor)
+            for u in admins:
+                if u.id != actor_id:
+                    target_map[u.id] = u
+
+            # 2. If assigned to another user (e.g. survey engineer updates lead of sales rep), notify that user
+            if assigned_user and assigned_user.id != actor_id:
+                target_map[assigned_user.id] = assigned_user
+
+        target_users = list(target_map.values())
 
         company = db.query(Company).filter(Company.id == company_id).first()
         company_settings = company.solar_settings if company else None
@@ -114,17 +140,20 @@ def dispatch_targeted_notification(
             db.add(notif)
             created_notifs.append(notif)
 
-            # 2. Email Notification
-            if recipient.email:
-                send_notification_email(
-                    to_email=recipient.email,
-                    recipient_name=recipient.full_name or "Team Member",
-                    subject=f"[SolarFlow CRM] {title}",
-                    title=title,
-                    message=message,
-                    link_url=link_url,
-                    company_settings=company_settings
-                )
+            # 2. Email Notification (only for other users, never send self-notification emails to actor)
+            if recipient.email and (actor_id is None or recipient.id != actor_id):
+                try:
+                    send_notification_email(
+                        to_email=recipient.email,
+                        recipient_name=recipient.full_name or "Team Member",
+                        subject=f"[SolarFlow CRM] {title}",
+                        title=title,
+                        message=message,
+                        link_url=link_url,
+                        company_settings=company_settings
+                    )
+                except Exception as mail_err:
+                    logger.warning(f"Could not dispatch email to {recipient.email}: {mail_err}")
 
         if created_notifs:
             db.commit()

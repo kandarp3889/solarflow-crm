@@ -207,6 +207,26 @@ def upload_loan_process_document(
         lp.overall_progress_pct = calculate_overall_progress(lp)
         db.commit()
 
+    # Send targeted notification for document upload
+    category_labels = {
+        "loan_file": "Loan File",
+        "installation": "Installation Document",
+        "net_meter_file": "Net Meter Document",
+        "inspection": "Inspection Report",
+        "subsidy": "Subsidy Document"
+    }
+    cat_label = category_labels.get(stage_category, stage_category.replace('_', ' ').title())
+    dispatch_targeted_notification(
+        db=db,
+        company_id=company.id,
+        actor=current_user,
+        assigned_user_id=lead.assigned_to_id,
+        title=f"Document Uploaded: {cat_label}",
+        message=f"{current_user.full_name} uploaded '{file.filename}' for {lead.lead_id} ({lead.full_name}).",
+        category="lead",
+        link_url=f"/leads/{lead.id}"
+    )
+
     res = LoanDocumentResponse.from_orm(doc)
     res.uploaded_by_name = current_user.full_name
     return res

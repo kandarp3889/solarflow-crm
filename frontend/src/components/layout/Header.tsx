@@ -54,8 +54,8 @@ export const Header: React.FC<HeaderProps> = ({
     if (!user) return;
 
     fetchNotifs();
-    // Fallback polling interval every 60 seconds (WebSocket provides instant updates)
-    const interval = setInterval(fetchNotifs, 60000);
+    // Fallback polling interval every 15 seconds (WebSocket provides instant updates)
+    const interval = setInterval(fetchNotifs, 15000);
 
     const handleDataUpdate = () => {
       fetchNotifs();

@@ -73,7 +73,8 @@ def ensure_loan_process_for_lead(
     db: Session,
     company_id: int,
     lead: Lead,
-    actor_user_id: Optional[int] = None
+    actor_user_id: Optional[int] = None,
+    notify: bool = False
 ) -> LoanProcess:
     """
     Ensures a single LoanProcess record is initialized for a won lead without duplicates.
@@ -113,19 +114,20 @@ def ensure_loan_process_for_lead(
     )
     db.add(act)
 
-    # Targeted notification
-    actor_user = db.query(User).filter(User.id == actor_user_id).first() if actor_user_id else None
-    actor_name = actor_user.full_name if actor_user else "System"
-    dispatch_targeted_notification(
-        db=db,
-        company_id=company_id,
-        actor=actor_user,
-        assigned_user_id=lead.assigned_to_id,
-        title=f"Loan Workflow Active: {lead.full_name}",
-        message=f"{actor_name} marked {lead.lead_id} ({lead.full_name}) as Deal Won. Loan application, installation, net metering, and subsidy workflow is now ready.",
-        category="lead",
-        link_url=f"/leads/{lead.id}"
-    )
+    # Targeted notification if explicitly requested
+    if notify:
+        actor_user = db.query(User).filter(User.id == actor_user_id).first() if actor_user_id else None
+        actor_name = actor_user.full_name if actor_user else "System"
+        dispatch_targeted_notification(
+            db=db,
+            company_id=company_id,
+            actor=actor_user,
+            assigned_user_id=lead.assigned_to_id,
+            title=f"Loan Workflow Active: {lead.full_name}",
+            message=f"{actor_name} marked {lead.lead_id} ({lead.full_name}) as Deal Won. Loan application, installation, net metering, and subsidy workflow is now ready.",
+            category="lead",
+            link_url=f"/leads/{lead.id}"
+        )
 
     db.commit()
     db.refresh(new_lp)

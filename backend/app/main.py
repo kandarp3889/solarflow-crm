@@ -172,6 +172,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_event():
+    import asyncio
+    from app.services.websocket_manager import ws_manager
+    try:
+        loop = asyncio.get_running_loop()
+        ws_manager.set_loop(loop)
+    except Exception:
+        pass
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     import traceback

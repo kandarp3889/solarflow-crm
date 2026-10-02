@@ -564,3 +564,12 @@ class ApiClient {
 }
 
 export const api = new ApiClient();
+
+export const getFileUrl = (filePath: string): string => {
+  if (!filePath) return '#';
+  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+    return filePath;
+  }
+  const origin = BASE_URL.replace(/\/api\/?$/, '');
+  return `${origin}${filePath.startsWith('/') ? filePath : '/' + filePath}`;
+};

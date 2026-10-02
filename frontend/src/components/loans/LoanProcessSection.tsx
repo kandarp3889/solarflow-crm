@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText,
   Upload,
@@ -21,7 +21,7 @@ import {
   AlertTriangle,
   Download
 } from 'lucide-react';
-import { api } from '../../services/api';
+import { api, getFileUrl } from '../../services/api';
 import { LoanProcess, LoanDocument, LoanProcessUpdatePayload } from '../../types';
 
 interface LoanProcessSectionProps {
@@ -106,7 +106,10 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Form states
+  // Track initial load per leadId so we don't accidentally wipe user edits on re-renders
+  const loadedLeadIdRef = useRef<number | null>(null);
+
+  // Form states - preserved across uploads and edits
   const [loanStatus, setLoanStatus] = useState('Not Started');
   const [loanBankName, setLoanBankName] = useState('');
   const [loanAmount, setLoanAmount] = useState('');
@@ -132,46 +135,84 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
   const [subsidyAmount, setSubsidyAmount] = useState('');
   const [subsidyNotes, setSubsidyNotes] = useState('');
 
-  const fetchLoanData = async () => {
-    setLoading(true);
+  // Construct current payload from user's active inputs
+  const getCurrentFormPayload = (): LoanProcessUpdatePayload => ({
+    loan_status: loanStatus,
+    loan_bank_name: loanBankName.trim() || undefined,
+    loan_amount: loanAmount ? parseFloat(loanAmount) : undefined,
+    loan_notes: loanNotes.trim() || undefined,
+
+    installation_status: installationStatus,
+    installer_name: installerName.trim() || undefined,
+    installation_date: installationDate ? new Date(installationDate).toISOString() : undefined,
+    installation_notes: installationNotes.trim() || undefined,
+
+    net_meter_status: netMeterStatus,
+    net_meter_application_number: netMeterAppNum.trim() || undefined,
+    discom_name: discomName.trim() || undefined,
+    net_meter_notes: netMeterNotes.trim() || undefined,
+
+    inspection_status: inspectionStatus,
+    inspector_name: inspectorName.trim() || undefined,
+    inspection_date: inspectionDate ? new Date(inspectionDate).toISOString() : undefined,
+    inspection_notes: inspectionNotes.trim() || undefined,
+
+    subsidy_status: subsidyStatus,
+    subsidy_application_number: subsidyAppNum.trim() || undefined,
+    subsidy_amount: subsidyAmount ? parseFloat(subsidyAmount) : undefined,
+    subsidy_notes: subsidyNotes.trim() || undefined
+  });
+
+  // Fetch loan data: isInitial=true populates form fields; isInitial=false only updates metadata & documents without touching form inputs
+  const fetchLoanData = async (isInitial = true) => {
+    if (isInitial) {
+      setLoading(true);
+    }
     setErrorMsg(null);
     try {
       const data: LoanProcess = await api.getLoanProcess(leadId);
       setLoanProcess(data);
 
-      setLoanStatus(data.loan_status || 'Not Started');
-      setLoanBankName(data.loan_bank_name || '');
-      setLoanAmount(data.loan_amount ? data.loan_amount.toString() : '');
-      setLoanNotes(data.loan_notes || '');
+      if (isInitial) {
+        setLoanStatus(data.loan_status || 'Not Started');
+        setLoanBankName(data.loan_bank_name || '');
+        setLoanAmount(data.loan_amount ? data.loan_amount.toString() : '');
+        setLoanNotes(data.loan_notes || '');
 
-      setInstallationStatus(data.installation_status || 'Not Started');
-      setInstallerName(data.installer_name || '');
-      setInstallationDate(data.installation_date ? data.installation_date.split('T')[0] : '');
-      setInstallationNotes(data.installation_notes || '');
+        setInstallationStatus(data.installation_status || 'Not Started');
+        setInstallerName(data.installer_name || '');
+        setInstallationDate(data.installation_date ? data.installation_date.split('T')[0] : '');
+        setInstallationNotes(data.installation_notes || '');
 
-      setNetMeterStatus(data.net_meter_status || 'Not Started');
-      setNetMeterAppNum(data.net_meter_application_number || '');
-      setDiscomName(data.discom_name || '');
-      setNetMeterNotes(data.net_meter_notes || '');
+        setNetMeterStatus(data.net_meter_status || 'Not Started');
+        setNetMeterAppNum(data.net_meter_application_number || '');
+        setDiscomName(data.discom_name || '');
+        setNetMeterNotes(data.net_meter_notes || '');
 
-      setInspectionStatus(data.inspection_status || 'Not Started');
-      setInspectorName(data.inspector_name || '');
-      setInspectionDate(data.inspection_date ? data.inspection_date.split('T')[0] : '');
-      setInspectionNotes(data.inspection_notes || '');
+        setInspectionStatus(data.inspection_status || 'Not Started');
+        setInspectorName(data.inspector_name || '');
+        setInspectionDate(data.inspection_date ? data.inspection_date.split('T')[0] : '');
+        setInspectionNotes(data.inspection_notes || '');
 
-      setSubsidyStatus(data.subsidy_status || 'Not Started');
-      setSubsidyAppNum(data.subsidy_application_number || '');
-      setSubsidyAmount(data.subsidy_amount ? data.subsidy_amount.toString() : '');
-      setSubsidyNotes(data.subsidy_notes || '');
+        setSubsidyStatus(data.subsidy_status || 'Not Started');
+        setSubsidyAppNum(data.subsidy_application_number || '');
+        setSubsidyAmount(data.subsidy_amount ? data.subsidy_amount.toString() : '');
+        setSubsidyNotes(data.subsidy_notes || '');
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error loading loan process details');
     } finally {
-      setLoading(false);
+      if (isInitial) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchLoanData();
+    if (loadedLeadIdRef.current !== leadId) {
+      loadedLeadIdRef.current = leadId;
+      fetchLoanData(true);
+    }
   }, [leadId]);
 
   const handleSaveStatuses = async () => {
@@ -179,33 +220,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
-      const payload: LoanProcessUpdatePayload = {
-        loan_status: loanStatus,
-        loan_bank_name: loanBankName.trim() || undefined,
-        loan_amount: loanAmount ? parseFloat(loanAmount) : undefined,
-        loan_notes: loanNotes.trim() || undefined,
-
-        installation_status: installationStatus,
-        installer_name: installerName.trim() || undefined,
-        installation_date: installationDate ? new Date(installationDate).toISOString() : undefined,
-        installation_notes: installationNotes.trim() || undefined,
-
-        net_meter_status: netMeterStatus,
-        net_meter_application_number: netMeterAppNum.trim() || undefined,
-        discom_name: discomName.trim() || undefined,
-        net_meter_notes: netMeterNotes.trim() || undefined,
-
-        inspection_status: inspectionStatus,
-        inspector_name: inspectorName.trim() || undefined,
-        inspection_date: inspectionDate ? new Date(inspectionDate).toISOString() : undefined,
-        inspection_notes: inspectionNotes.trim() || undefined,
-
-        subsidy_status: subsidyStatus,
-        subsidy_application_number: subsidyAppNum.trim() || undefined,
-        subsidy_amount: subsidyAmount ? parseFloat(subsidyAmount) : undefined,
-        subsidy_notes: subsidyNotes.trim() || undefined
-      };
-
+      const payload = getCurrentFormPayload();
       const updated = await api.updateLoanProcess(leadId, payload);
       setLoanProcess(updated);
       setSuccessMsg('Loan workflow and installation progress saved successfully!');
@@ -227,17 +242,57 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
 
     // Validate size (15MB)
     if (file.size > 15 * 1024 * 1024) {
-      alert('File size exceeds the 15 MB limit. Please upload a smaller document.');
+      setErrorMsg('File size exceeds the 15 MB limit. Please upload a smaller document.');
+      return;
+    }
+
+    // Validate file extensions
+    const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
+    const fileNameLower = file.name.toLowerCase();
+    const hasValidExt = validExtensions.some(ext => fileNameLower.endsWith(ext));
+    if (!hasValidExt) {
+      setErrorMsg('Invalid file format. Allowed file types: PDF, JPG, JPEG, PNG, WEBP.');
       return;
     }
 
     setUploadingCategory(stageCategory);
     setErrorMsg(null);
+    setSuccessMsg(null);
+
     try {
+      // 1. Sync and save current form data to database so user-entered values are persisted
+      const currentPayload = getCurrentFormPayload();
+      await api.updateLoanProcess(leadId, currentPayload);
+
+      // 2. Upload document to backend
       await api.uploadLoanDocument(leadId, file, stageCategory);
-      await fetchLoanData();
+
+      // 3. Fetch latest loan process metadata (documents & progress) WITHOUT resetting user's form inputs
+      const latestData: LoanProcess = await api.getLoanProcess(leadId);
+
+      // 4. Update ONLY loanProcess state (documents list & progress gauge)
+      setLoanProcess(latestData);
+
+      // If this stage was 'Not Started', auto-advance its dropdown to match active progress
+      if (stageCategory === 'loan_file' && loanStatus === 'Not Started') {
+        setLoanStatus(latestData.loan_status || 'In Progress');
+      } else if (stageCategory === 'installation' && installationStatus === 'Not Started') {
+        setInstallationStatus(latestData.installation_status || 'In Progress');
+      } else if (stageCategory === 'net_meter_file' && netMeterStatus === 'Not Started') {
+        setNetMeterStatus(latestData.net_meter_status || 'In Progress');
+      } else if (stageCategory === 'inspection' && inspectionStatus === 'Not Started') {
+        setInspectionStatus(latestData.inspection_status || 'In Progress');
+      } else if (stageCategory === 'subsidy' && subsidyStatus === 'Not Started') {
+        setSubsidyStatus(latestData.subsidy_status || 'In Progress');
+      }
+
+      setSuccessMsg(`Document "${file.name}" uploaded successfully!`);
+      setTimeout(() => setSuccessMsg(null), 4000);
+
+      // Notify parent without full page reloads
       if (onRefresh) onRefresh();
     } catch (err: any) {
+      // 5. On failure, preserve all existing form values and display error
       setErrorMsg(err.message || `Error uploading ${stageCategory} document`);
     } finally {
       setUploadingCategory(null);
@@ -246,16 +301,39 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
 
   const handleDeleteDocument = async (docId: number) => {
     if (!window.confirm('Are you sure you want to delete this document?')) return;
+    setErrorMsg(null);
+    setSuccessMsg(null);
     try {
       await api.deleteLoanDocument(leadId, docId);
-      await fetchLoanData();
+
+      // Update only documents without touching form inputs
+      setLoanProcess((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          documents: (prev.documents || []).filter((d) => d.id !== docId)
+        };
+      });
+
+      // Fetch latest progress without touching form inputs
+      try {
+        const latestData = await api.getLoanProcess(leadId);
+        setLoanProcess((prev) => prev ? {
+          ...prev,
+          overall_progress_pct: latestData.overall_progress_pct,
+          documents: latestData.documents
+        } : latestData);
+      } catch (e) {}
+
+      setSuccessMsg('Document deleted successfully');
+      setTimeout(() => setSuccessMsg(null), 3000);
       if (onRefresh) onRefresh();
     } catch (err: any) {
-      alert(err.message || 'Error deleting document');
+      setErrorMsg(err.message || 'Error deleting document');
     }
   };
 
-  if (loading) {
+  if (loading && !loanProcess) {
     return (
       <div className="p-12 text-center text-slate-400">
         <Loader2 className="w-8 h-8 animate-spin mx-auto text-amber-500 mb-3" />
@@ -451,7 +529,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                     <div className="flex items-center gap-2 truncate max-w-[70%]">
                       <Paperclip className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
                       <a
-                        href={doc.file_path}
+                        href={getFileUrl(doc.file_path)}
                         target="_blank"
                         rel="noreferrer"
                         className="text-slate-200 font-medium hover:text-amber-400 truncate hover:underline"
@@ -465,7 +543,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                     </div>
                     <div className="flex items-center gap-2">
                       <a
-                        href={doc.file_path}
+                        href={getFileUrl(doc.file_path)}
                         download={doc.file_name}
                         target="_blank"
                         rel="noreferrer"
@@ -583,7 +661,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                     <div className="flex items-center gap-2 truncate max-w-[70%]">
                       <Paperclip className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
                       <a
-                        href={doc.file_path}
+                        href={getFileUrl(doc.file_path)}
                         target="_blank"
                         rel="noreferrer"
                         className="text-slate-200 font-medium hover:text-amber-400 truncate hover:underline"
@@ -597,7 +675,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                     </div>
                     <div className="flex items-center gap-2">
                       <a
-                        href={doc.file_path}
+                        href={getFileUrl(doc.file_path)}
                         download={doc.file_name}
                         target="_blank"
                         rel="noreferrer"
@@ -716,7 +794,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                     <div className="flex items-center gap-2 truncate max-w-[70%]">
                       <Paperclip className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
                       <a
-                        href={doc.file_path}
+                        href={getFileUrl(doc.file_path)}
                         target="_blank"
                         rel="noreferrer"
                         className="text-slate-200 font-medium hover:text-amber-400 truncate hover:underline"
@@ -730,7 +808,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                     </div>
                     <div className="flex items-center gap-2">
                       <a
-                        href={doc.file_path}
+                        href={getFileUrl(doc.file_path)}
                         download={doc.file_name}
                         target="_blank"
                         rel="noreferrer"
@@ -848,7 +926,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                     <div className="flex items-center gap-2 truncate max-w-[70%]">
                       <Paperclip className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
                       <a
-                        href={doc.file_path}
+                        href={getFileUrl(doc.file_path)}
                         target="_blank"
                         rel="noreferrer"
                         className="text-slate-200 font-medium hover:text-amber-400 truncate hover:underline"
@@ -862,7 +940,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                     </div>
                     <div className="flex items-center gap-2">
                       <a
-                        href={doc.file_path}
+                        href={getFileUrl(doc.file_path)}
                         download={doc.file_name}
                         target="_blank"
                         rel="noreferrer"
@@ -980,7 +1058,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                     <div className="flex items-center gap-2 truncate max-w-[70%]">
                       <Paperclip className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                       <a
-                        href={doc.file_path}
+                        href={getFileUrl(doc.file_path)}
                         target="_blank"
                         rel="noreferrer"
                         className="text-slate-200 font-medium hover:text-amber-400 truncate hover:underline"
@@ -994,7 +1072,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                     </div>
                     <div className="flex items-center gap-2">
                       <a
-                        href={doc.file_path}
+                        href={getFileUrl(doc.file_path)}
                         download={doc.file_name}
                         target="_blank"
                         rel="noreferrer"

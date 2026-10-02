@@ -26,7 +26,6 @@ from app.api.settings import router as settings_router
 from app.api.notifications import router as notifications_router
 from app.api.audit_logs import router as audit_logs_router
 from app.api.loan_process import router as loan_process_router
-from app.api.invoices import router as invoices_router
 
 # Create database tables automatically
 Base.metadata.create_all(bind=engine)
@@ -39,15 +38,6 @@ def ensure_schema_compatibility():
                 conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_permissions JSON DEFAULT '[]'::json;"))
                 conn.execute(text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS custom_roles JSON DEFAULT '[]'::json;"))
 
-                # Hitech BillSoft invoice items grid compatibility
-                try:
-                    conn.execute(text("ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS is_tax_inclusive BOOLEAN DEFAULT FALSE;"))
-                    conn.execute(text("ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS discount_type VARCHAR(20) DEFAULT 'percent';"))
-                    conn.execute(text("ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS discount_value FLOAT DEFAULT 0.0;"))
-                    conn.execute(text("ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS discount_amount FLOAT DEFAULT 0.0;"))
-                    conn.execute(text("ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS item_code VARCHAR(50);"))
-                except Exception as inv_err:
-                    print(f"[!] invoice_items schema migration note: {inv_err}")
 
                 cols_to_drop = [
                     "consumer_number", "roof_ownership", "roof_type", "lead_score", "score_category", "estimated_value",
@@ -85,22 +75,6 @@ def ensure_schema_compatibility():
                         except Exception as drop_err:
                             print(f"[!] Could not drop column {col} from leads: {drop_err}")
 
-                try:
-                    inv_items_result = conn.execute(text("PRAGMA table_info(invoice_items)")).fetchall()
-                    inv_item_cols = [row[1] for row in inv_items_result]
-                    if inv_items_result:
-                        if "is_tax_inclusive" not in inv_item_cols:
-                            conn.execute(text("ALTER TABLE invoice_items ADD COLUMN is_tax_inclusive BOOLEAN DEFAULT 0"))
-                        if "discount_type" not in inv_item_cols:
-                            conn.execute(text("ALTER TABLE invoice_items ADD COLUMN discount_type VARCHAR(20) DEFAULT 'percent'"))
-                        if "discount_value" not in inv_item_cols:
-                            conn.execute(text("ALTER TABLE invoice_items ADD COLUMN discount_value FLOAT DEFAULT 0.0"))
-                        if "discount_amount" not in inv_item_cols:
-                            conn.execute(text("ALTER TABLE invoice_items ADD COLUMN discount_amount FLOAT DEFAULT 0.0"))
-                        if "item_code" not in inv_item_cols:
-                            conn.execute(text("ALTER TABLE invoice_items ADD COLUMN item_code VARCHAR(50)"))
-                except Exception as sqlite_inv_err:
-                    print(f"[!] SQLite invoice_items migration note: {sqlite_inv_err}")
                 conn.commit()
     except Exception as e:
         print(f"[!] Schema compatibility notice: {e}")
@@ -180,23 +154,9 @@ def ensure_existing_won_leads_have_loan_processes():
     except Exception as e:
         print(f"[!] Won leads loan initialization notice: {e}")
 
-def ensure_default_invoice_settings():
-    try:
-        from app.database import SessionLocal
-        from app.models.models import Company
-        from app.services.invoice_service import get_or_create_invoice_settings
-        db = SessionLocal()
-        companies = db.query(Company).all()
-        for comp in companies:
-            get_or_create_invoice_settings(db, comp.id)
-        db.close()
-    except Exception as e:
-        print(f"[!] Invoice settings initialization notice: {e}")
-
 auto_seed_if_empty()
 ensure_default_pipeline_stages()
 ensure_existing_won_leads_have_loan_processes()
-ensure_default_invoice_settings()
 
 app = FastAPI(
     title="SolarFlow CRM SaaS API",
@@ -262,7 +222,6 @@ app.include_router(settings_router, prefix=settings.API_V1_STR)
 app.include_router(notifications_router, prefix=settings.API_V1_STR)
 app.include_router(audit_logs_router, prefix=settings.API_V1_STR)
 app.include_router(loan_process_router, prefix=settings.API_V1_STR)
-app.include_router(invoices_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():

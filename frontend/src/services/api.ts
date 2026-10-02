@@ -563,7 +563,7 @@ class ApiClient {
   }
 
   // -------------------------------------------------------------
-  // Invoice Management Module
+  // File Download Helper
   // -------------------------------------------------------------
   public async downloadBlob(endpoint: string, options: RequestInit = {}): Promise<Blob> {
     const url = `${BASE_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
@@ -596,116 +596,6 @@ class ApiClient {
     }
 
     return response.blob();
-  }
-
-  async getInvoiceDashboard() {
-    return this.request('/invoices/dashboard');
-  }
-
-  async getNextInvoiceNumber() {
-    return this.request('/invoices/next-number');
-  }
-
-  async getInvoices(params?: {
-    search?: string;
-    status?: string;
-    lead_id?: number;
-    start_date?: string;
-    end_date?: string;
-    skip?: number;
-    limit?: number;
-  }) {
-    const searchParams = new URLSearchParams();
-    if (params?.search) searchParams.append('search', params.search);
-    if (params?.status) searchParams.append('status', params.status);
-    if (params?.lead_id) searchParams.append('lead_id', String(params.lead_id));
-    if (params?.start_date) searchParams.append('start_date', params.start_date);
-    if (params?.end_date) searchParams.append('end_date', params.end_date);
-    if (params?.skip !== undefined) searchParams.append('skip', String(params.skip));
-    if (params?.limit !== undefined) searchParams.append('limit', String(params.limit));
-
-    const qs = searchParams.toString();
-    return this.request(`/invoices${qs ? '?' + qs : ''}`);
-  }
-
-  async getInvoiceById(id: number) {
-    return this.request(`/invoices/${id}`);
-  }
-
-  async createInvoice(data: any) {
-    return this.request('/invoices', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  }
-
-  async updateInvoice(id: number, data: any) {
-    return this.request(`/invoices/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    });
-  }
-
-  async cancelInvoice(id: number, notes?: string) {
-    const qs = notes ? `?notes=${encodeURIComponent(notes)}` : '';
-    return this.request(`/invoices/${id}/cancel${qs}`, {
-      method: 'POST'
-    });
-  }
-
-  async recordInvoicePayment(invoiceId: number, data: any) {
-    return this.request(`/invoices/${invoiceId}/payments`, {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  }
-
-  async deleteInvoicePayment(invoiceId: number, paymentId: number) {
-    return this.request(`/invoices/${invoiceId}/payments/${paymentId}`, {
-      method: 'DELETE'
-    });
-  }
-
-  async getInvoiceSettings() {
-    return this.request('/invoices/settings/current');
-  }
-
-  async updateInvoiceSettings(data: any) {
-    return this.request('/invoices/settings/current', {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    });
-  }
-
-  async downloadInvoicePdf(invoiceId: number, copyType: string = 'Original Copy'): Promise<Blob> {
-    const qs = new URLSearchParams({
-      copy_type: copyType,
-      download: 'true'
-    }).toString();
-    return this.downloadBlob(`/invoices/${invoiceId}/pdf?${qs}`);
-  }
-
-  async downloadInvoiceBackupZip(): Promise<Blob> {
-    return this.downloadBlob('/invoices/backup/download');
-  }
-
-  async previewInvoiceBackup(file: File) {
-    const formData = new FormData();
-    formData.append('file', file);
-    return this.request('/invoices/backup/preview', {
-      method: 'POST',
-      body: formData
-    });
-  }
-
-  async restoreInvoiceBackup(file: File, strategy: 'skip_existing' | 'replace_all') {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('strategy', strategy);
-    return this.request('/invoices/backup/restore', {
-      method: 'POST',
-      body: formData
-    });
   }
 }
 

@@ -57,8 +57,6 @@ def test_admin_notifications_flow():
             "state": "Gujarat",
             "monthly_bill": 4500,
             "property_type": "Residential",
-            "roof_ownership": "Owned",
-            "roof_type": "Concrete Flat",
             "lead_source": "Website",
             "stage": "new_lead",
             "recommended_kw": 5.0

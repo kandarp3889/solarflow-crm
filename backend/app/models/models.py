@@ -190,13 +190,10 @@ class Lead(Base):
 
     # Solar Requirements
     property_type = Column(String(50), default="Residential") # Residential, Commercial, Industrial, Agricultural
-    consumer_number = Column(String(100), nullable=True, index=True)
-    roof_ownership = Column(String(50), default="Owned", nullable=True) # Owned, Rented, Leased, Shared
     monthly_bill = Column(Float, default=0.0) # In currency, e.g. INR ₹
     consumption_kwh = Column(Float, default=0.0) # Units per month
     recommended_kw = Column(Float, default=0.0)
     interested_kw = Column(Float, default=0.0)
-    roof_type = Column(String(100), default="Concrete Flat") # Concrete Flat, Metal Sheet, Tile, Curved
     roof_area_sqft = Column(Float, default=0.0)
     electricity_provider = Column(String(100), nullable=True)
     existing_solar = Column(Boolean, default=False)
@@ -208,9 +205,6 @@ class Lead(Base):
     lead_source = Column(String(50), default="Website", index=True) # Website, WhatsApp, Facebook, Google Ads, etc.
     assigned_to_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     stage = Column(String(50), default=LeadStage.NEW_LEAD.value, index=True)
-    lead_score = Column(Integer, default=50) # 0-100
-    score_category = Column(String(20), default=ScoreCategory.WARM.value) # HOT, WARM, COLD
-    estimated_value = Column(Float, default=0.0)
     win_probability_pct = Column(Integer, default=20)
     expected_closing_date = Column(DateTime, nullable=True)
     lost_reason = Column(String(255), nullable=True)

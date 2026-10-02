@@ -127,13 +127,10 @@ class LeadBase(BaseModel):
     pincode: Optional[str] = None
 
     property_type: Optional[str] = "Residential"
-    consumer_number: Optional[str] = None
-    roof_ownership: Optional[str] = "Owned"
     monthly_bill: Optional[float] = 0.0
     consumption_kwh: Optional[float] = 0.0
     recommended_kw: Optional[float] = 0.0
     interested_kw: Optional[float] = 0.0
-    roof_type: Optional[str] = "Concrete Flat"
     roof_area_sqft: Optional[float] = 0.0
     electricity_provider: Optional[str] = None
     existing_solar: Optional[bool] = False
@@ -144,7 +141,6 @@ class LeadBase(BaseModel):
     lead_source: Optional[str] = "Website"
     assigned_to_id: Optional[int] = None
     stage: Optional[str] = "new_lead"
-    estimated_value: Optional[float] = 0.0
     win_probability_pct: Optional[int] = 20
     expected_closing_date: Optional[datetime] = None
     next_follow_up_date: Optional[datetime] = None
@@ -163,13 +159,10 @@ class LeadUpdate(BaseModel):
     pincode: Optional[str] = None
 
     property_type: Optional[str] = None
-    consumer_number: Optional[str] = None
-    roof_ownership: Optional[str] = None
     monthly_bill: Optional[float] = None
     consumption_kwh: Optional[float] = None
     recommended_kw: Optional[float] = None
     interested_kw: Optional[float] = None
-    roof_type: Optional[str] = None
     roof_area_sqft: Optional[float] = None
     electricity_provider: Optional[str] = None
     existing_solar: Optional[bool] = None
@@ -180,9 +173,6 @@ class LeadUpdate(BaseModel):
     lead_source: Optional[str] = None
     assigned_to_id: Optional[int] = None
     stage: Optional[str] = None
-    lead_score: Optional[int] = None
-    score_category: Optional[str] = None
-    estimated_value: Optional[float] = None
     win_probability_pct: Optional[int] = None
     expected_closing_date: Optional[datetime] = None
     lost_reason: Optional[str] = None
@@ -192,8 +182,6 @@ class LeadResponse(LeadBase):
     id: int
     company_id: int
     lead_id: str
-    lead_score: int
-    score_category: str
     lost_reason: Optional[str] = None
     next_follow_up_date: Optional[datetime] = None
     assigned_to_name: Optional[str] = None

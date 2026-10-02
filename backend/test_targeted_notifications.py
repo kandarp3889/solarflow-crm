@@ -85,8 +85,6 @@ def test_targeted_notifications():
             "state": "Gujarat",
             "monthly_bill": 5000,
             "property_type": "Residential",
-            "roof_ownership": "Owned",
-            "roof_type": "Concrete Flat",
             "lead_source": "Direct",
             "stage": "new_lead",
             "recommended_kw": 4.0,

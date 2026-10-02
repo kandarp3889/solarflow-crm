@@ -19,7 +19,6 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Lead, PipelineStageConfig } from '../../types';
-import { LeadScoreBadge } from '../leads/LeadScoreBadge';
 import { api } from '../../services/api';
 import { PipelineStagesModal, getStageColorConfig } from './PipelineStagesModal';
 
@@ -107,7 +106,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   // Aggregated Pipeline Metrics
   const totalLeads = columnsData.reduce((acc, col) => acc + (col.count || 0), 0);
-  const totalPipelineValue = columnsData.reduce((acc, col) => acc + (col.total_value || 0), 0);
 
   return (
     <div className="space-y-4">
@@ -134,16 +132,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         {/* Action Controls & Metrics */}
         <div className="flex items-center gap-3 flex-wrap">
           {/* Quick Metrics */}
-          <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs">
-            <div>
-              <span className="text-slate-500 text-[10px] block uppercase font-mono">Total Deals</span>
-              <span className="font-bold text-white">{totalLeads}</span>
-            </div>
-            <div className="w-px h-6 bg-slate-800" />
-            <div>
-              <span className="text-slate-500 text-[10px] block uppercase font-mono">Value</span>
-              <span className="font-bold text-emerald-400">₹{(totalPipelineValue / 100000).toFixed(1)}L</span>
-            </div>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs">
+            <span className="text-slate-500 text-[10px] block uppercase font-mono">Total Deals:</span>
+            <span className="font-bold text-white">{totalLeads}</span>
           </div>
 
           {/* Manage Stages Button */}
@@ -208,10 +199,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs font-semibold text-emerald-400 font-mono">
-                      ₹{((colDef.total_value || 0) / 100000).toFixed(1)}L
-                    </span>
-
                     <button
                       onClick={() => setIsStageModalOpen(true)}
                       title="Edit stage settings"
@@ -244,7 +231,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           draggedLeadId === lead.id ? 'opacity-40 scale-95 border-amber-500' : ''
                         }`}
                       >
-                        {/* Top: Customer & Score */}
+                        {/* Top: Customer */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <button
@@ -257,17 +244,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                               {lead.lead_id} {lead.city ? `• ${lead.city}` : ''}
                             </span>
                           </div>
-                          <LeadScoreBadge score={lead.lead_score} category={lead.score_category} />
                         </div>
 
-                        {/* Middle: System kW & Deal Value */}
+                        {/* Middle: System kW & Monthly Bill */}
                         <div className="flex items-center justify-between text-xs py-1 border-y border-slate-700/50">
                           <span className="text-amber-400 font-bold flex items-center gap-1">
                             <Sun className="w-3.5 h-3.5" />
                             {lead.recommended_kw || lead.interested_kw || 3.0} kW
                           </span>
-                          <span className="text-emerald-400 font-bold font-mono">
-                            ₹{(lead.estimated_value || 0).toLocaleString()}
+                          <span className="text-slate-300 font-semibold font-mono text-[11px]">
+                            ₹{(lead.monthly_bill || 0).toLocaleString()}/mo
                           </span>
                         </div>
 

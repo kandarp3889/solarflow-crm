@@ -38,8 +38,7 @@ def run_pipeline_test():
     lead_payload = {
         'full_name': 'Ramesh Patel',
         'phone': '+91 98250 11223',
-        'stage': stage_key,
-        'estimated_value': 280000.0
+        'stage': stage_key
     }
     create_lead_res = client.post('/api/leads', headers=headers, json=lead_payload)
     assert create_lead_res.status_code == 200

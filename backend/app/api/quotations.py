@@ -119,7 +119,6 @@ def create_quotation(
     # Advance lead stage to quotation_sent if in earlier stage
     if lead.stage in [LeadStage.NEW_LEAD.value, LeadStage.CONTACTED.value, LeadStage.QUALIFIED.value, LeadStage.SURVEY_COMPLETED.value]:
         lead.stage = LeadStage.QUOTATION_SENT.value
-    lead.estimated_value = calc["final_price"]
 
     # Log activity
     act = LeadActivity(

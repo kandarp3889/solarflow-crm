@@ -36,7 +36,11 @@ def ensure_schema_compatibility():
             if engine.dialect.name == "postgresql":
                 conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_permissions JSON DEFAULT '[]'::json;"))
                 conn.execute(text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS custom_roles JSON DEFAULT '[]'::json;"))
-                conn.execute(text("ALTER TABLE leads ADD COLUMN IF NOT EXISTS consumer_number VARCHAR(100);"))
+                for col in ["consumer_number", "roof_ownership", "roof_type", "lead_score", "score_category", "estimated_value"]:
+                    try:
+                        conn.execute(text(f"ALTER TABLE leads DROP COLUMN IF EXISTS {col};"))
+                    except Exception as drop_err:
+                        print(f"[!] Could not drop column {col} from leads: {drop_err}")
                 conn.commit()
             elif engine.dialect.name == "sqlite":
                 result = conn.execute(text("PRAGMA table_info(users)")).fetchall()
@@ -49,8 +53,12 @@ def ensure_schema_compatibility():
                     conn.execute(text("ALTER TABLE companies ADD COLUMN custom_roles JSON DEFAULT '[]'"))
                 lead_result = conn.execute(text("PRAGMA table_info(leads)")).fetchall()
                 lead_cols = [row[1] for row in lead_result]
-                if "consumer_number" not in lead_cols:
-                    conn.execute(text("ALTER TABLE leads ADD COLUMN consumer_number VARCHAR(100)"))
+                for col in ["consumer_number", "roof_ownership", "roof_type", "lead_score", "score_category", "estimated_value"]:
+                    if col in lead_cols:
+                        try:
+                            conn.execute(text(f"ALTER TABLE leads DROP COLUMN {col}"))
+                        except Exception as drop_err:
+                            print(f"[!] Could not drop column {col} from leads: {drop_err}")
                 conn.commit()
     except Exception as e:
         print(f"[!] Schema compatibility notice: {e}")

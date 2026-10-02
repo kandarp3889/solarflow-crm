@@ -32,22 +32,21 @@ def get_dashboard_stats(
     won_deals = db.query(Lead).filter(Lead.company_id == cid, Lead.stage == LeadStage.WON.value).count()
     lost_deals = db.query(Lead).filter(Lead.company_id == cid, Lead.stage == LeadStage.LOST.value).count()
 
-    pipeline_val = db.query(func.sum(Lead.estimated_value)).filter(
+    pipeline_val = db.query(func.sum(Quotation.final_price)).join(Lead, Quotation.lead_id == Lead.id).filter(
         Lead.company_id == cid,
         Lead.stage.notin_([LeadStage.WON.value, LeadStage.LOST.value])
     ).scalar() or 0.0
 
-    won_rev = db.query(func.sum(Lead.estimated_value)).filter(
+    won_rev = db.query(func.sum(Quotation.final_price)).join(Lead, Quotation.lead_id == Lead.id).filter(
         Lead.company_id == cid,
         Lead.stage == LeadStage.WON.value
     ).scalar() or 0.0
 
-    # Expected revenue = Sum of (estimated_value * win_probability_pct / 100)
-    open_leads = db.query(Lead).filter(
+    open_quotations = db.query(Quotation).join(Lead, Quotation.lead_id == Lead.id).filter(
         Lead.company_id == cid,
         Lead.stage.notin_([LeadStage.LOST.value])
     ).all()
-    expected_rev = sum(l.estimated_value * (l.win_probability_pct / 100.0) for l in open_leads)
+    expected_rev = sum(q.final_price * ((q.lead.win_probability_pct or 20) / 100.0) for q in open_quotations if q.final_price)
 
     return DashboardStatsResponse(
         total_leads=KpiCard(
@@ -184,8 +183,7 @@ def get_lead_sources(
     cid = company.id
     results = db.query(
         Lead.lead_source,
-        func.count(Lead.id).label("count"),
-        func.sum(Lead.estimated_value).label("revenue")
+        func.count(Lead.id).label("count")
     ).filter(Lead.company_id == cid).group_by(Lead.lead_source).all()
 
     total = sum(r[1] for r in results) or 1
@@ -193,7 +191,11 @@ def get_lead_sources(
     for r in results:
         src = r[0] or "Website"
         cnt = r[1]
-        rev = r[2] or 0.0
+        rev = db.query(func.sum(Quotation.final_price)).join(Lead, Quotation.lead_id == Lead.id).filter(
+            Lead.company_id == cid,
+            Lead.lead_source == src,
+            Lead.stage == "won"
+        ).scalar() or 0.0
         pct = round((cnt / total) * 100, 1)
         items.append(LeadSourceItem(
             source=src,
@@ -231,7 +233,9 @@ def get_pipeline_funnel(
 
     for stage_key, label in stages_order:
         cnt = db.query(Lead).filter(Lead.company_id == cid, Lead.stage == stage_key).count()
-        val = db.query(func.sum(Lead.estimated_value)).filter(Lead.company_id == cid, Lead.stage == stage_key).scalar() or 0.0
+        val = db.query(func.sum(Quotation.final_price)).join(Lead, Quotation.lead_id == Lead.id).filter(
+            Lead.company_id == cid, Lead.stage == stage_key
+        ).scalar() or 0.0
         rate = round((cnt / total_leads) * 100, 1)
         funnel.append(FunnelStageItem(
             stage=stage_key,
@@ -252,7 +256,7 @@ def get_revenue_chart(
     months = ["Apr", "May", "Jun", "Jul", "Aug", "Sep"]
     
     # Calculate or deliver realistic monthly projection
-    total_won = db.query(func.sum(Lead.estimated_value)).filter(
+    total_won = db.query(func.sum(Quotation.final_price)).join(Lead, Quotation.lead_id == Lead.id).filter(
         Lead.company_id == cid, Lead.stage == LeadStage.WON.value
     ).scalar() or 1250000.0
 
@@ -298,7 +302,7 @@ def get_team_performance(
         ).count()
         quotes = db.query(Quotation).filter(Quotation.company_id == cid, Quotation.created_by_id == u.id).count()
         won = db.query(Lead).filter(Lead.company_id == cid, Lead.assigned_to_id == u.id, Lead.stage == LeadStage.WON.value).count()
-        revenue = db.query(func.sum(Lead.estimated_value)).filter(
+        revenue = db.query(func.sum(Quotation.final_price)).join(Lead, Quotation.lead_id == Lead.id).filter(
             Lead.company_id == cid, Lead.assigned_to_id == u.id, Lead.stage == LeadStage.WON.value
         ).scalar() or 0.0
 

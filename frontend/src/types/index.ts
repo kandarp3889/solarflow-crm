@@ -170,13 +170,10 @@ export interface Lead {
   pincode?: string;
 
   property_type: string;
-  consumer_number?: string;
-  roof_ownership?: string;
   monthly_bill: number;
   consumption_kwh: number;
   recommended_kw: number;
   interested_kw: number;
-  roof_type: string;
   roof_area_sqft: number;
   electricity_provider?: string;
   existing_solar: boolean;
@@ -188,9 +185,6 @@ export interface Lead {
   assigned_to_id?: number;
   assigned_to_name?: string;
   stage: LeadStage;
-  lead_score: number;
-  score_category: ScoreCategory;
-  estimated_value: number;
   win_probability_pct: number;
   expected_closing_date?: string;
   lost_reason?: string;

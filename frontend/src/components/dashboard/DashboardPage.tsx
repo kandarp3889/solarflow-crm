@@ -36,7 +36,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [revenueData, setRevenueData] = useState<RevenueBreakdownItem[]>([]);
   const [teamData, setTeamData] = useState<TeamPerformanceItem[]>([]);
   const [followups, setFollowups] = useState<FollowUp[]>([]);
-  const [hotLeads, setHotLeads] = useState<Lead[]>([]);
+  const [recentLeads, setRecentLeads] = useState<Lead[]>([]);
 
   const fetchDashboard = async (showLoading = false) => {
     if (showLoading) setLoading(true);
@@ -48,7 +48,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         api.getRevenueData(),
         api.getTeamPerformance(),
         api.getFollowups(),
-        api.getLeads({ score_category: 'hot' })
+        api.getLeads()
       ]);
 
       setStats(s);
@@ -57,7 +57,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       setRevenueData(rev);
       setTeamData(team);
       setFollowups(fUps);
-      setHotLeads(leads);
+      setRecentLeads(leads);
     } catch (err) {
       console.error('Error fetching dashboard:', err);
     } finally {
@@ -160,10 +160,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* Sales Team Performance Leaderboard */}
       <TeamPerformanceTable data={teamData} loading={loading} />
 
-      {/* Tasks, Overdue, and Hot Leads Widgets */}
+      {/* Tasks, Overdue, and Recent Leads Widgets */}
       <TasksAndActivities
         followups={followups}
-        hotLeads={hotLeads}
+        recentLeads={recentLeads}
         onSelectLead={onSelectLead}
         onOpenQuickAction={onOpenQuickAction}
         onCompleteFollowup={handleCompleteFollowup}

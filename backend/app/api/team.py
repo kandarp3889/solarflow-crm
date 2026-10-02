@@ -193,7 +193,7 @@ def get_team_members(
         ).count()
         quotes_cnt = db.query(Quotation).filter(Quotation.company_id == company.id, Quotation.created_by_id == u.id).count()
         won_cnt = db.query(Lead).filter(Lead.company_id == company.id, Lead.assigned_to_id == u.id, Lead.stage == "won").count()
-        rev = db.query(func.sum(Lead.estimated_value)).filter(
+        rev = db.query(func.sum(Quotation.final_price)).join(Lead, Quotation.lead_id == Lead.id).filter(
             Lead.company_id == company.id, Lead.assigned_to_id == u.id, Lead.stage == "won"
         ).scalar() or 0.0
 

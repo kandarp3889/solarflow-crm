@@ -162,8 +162,7 @@ def notify_lead_created(db: Session, company_id: int, lead: Lead, actor: Optiona
     actor_name = _get_actor_name(actor)
     title = f"New Lead: {lead.full_name}"
     kw_str = f" ({lead.recommended_kw or lead.interested_kw} kW)" if (lead.recommended_kw or lead.interested_kw) else ""
-    val_str = f" Value: ₹{(lead.estimated_value or 0):,.0f}." if lead.estimated_value else ""
-    message = f"New solar rooftop lead {lead.lead_id} ({lead.full_name}) captured by {actor_name} via {lead.lead_source}{kw_str}.{val_str}"
+    message = f"New solar rooftop lead {lead.lead_id} ({lead.full_name}) captured by {actor_name} via {lead.lead_source}{kw_str}."
     return dispatch_targeted_notification(
         db=db,
         company_id=company_id,

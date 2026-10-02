@@ -45,14 +45,11 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [customerName, setCustomerName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [email, setEmail] = useState('');
-  const [consumerNumber, setConsumerNumber] = useState('');
   const [address, setAddress] = useState('');
   const [monthlyBill, setMonthlyBill] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
   const [state, setState] = useState('');
   const [city, setCity] = useState('');
-  const [roofOwnership, setRoofOwnership] = useState('');
-  const [roofType, setRoofType] = useState('');
   const [leadSource, setLeadSource] = useState('');
   const [assignedExecutive, setAssignedExecutive] = useState('');
 
@@ -60,14 +57,11 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
     setCustomerName('');
     setMobileNumber('');
     setEmail('');
-    setConsumerNumber('');
     setAddress('');
     setMonthlyBill('');
     setFollowUpDate('');
     setState('');
     setCity('');
-    setRoofOwnership('');
-    setRoofType('');
     setLeadSource('');
     setAssignedExecutive('');
   };
@@ -108,14 +102,11 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
         full_name: customerName.trim(),
         phone: mobileNumber.trim(),
         email: email.trim() || undefined,
-        consumer_number: consumerNumber.trim() || undefined,
         address: address.trim() || undefined,
         monthly_bill: billAmount,
         next_follow_up_date: followUpDate ? new Date(followUpDate).toISOString() : undefined,
         state: state || undefined,
         city: city.trim() || undefined,
-        roof_ownership: roofOwnership || 'Owned',
-        roof_type: roofType || 'Concrete Flat',
         lead_source: leadSource || 'Website',
         assigned_to_id: assignedExecutive ? parseInt(assignedExecutive) : undefined,
         property_type: 'Residential',
@@ -292,58 +283,8 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
             </div>
           </div>
 
-          {/* Consumer Number & Roof Ownership */}
+          {/* Lead Source & Assigned Executive */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
-                <span>Consumer Number</span>
-                <span className="text-[10px] text-slate-500 font-normal">Optional</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. 1029384756 (CA / Meter No)"
-                value={consumerNumber}
-                onChange={(e) => setConsumerNumber(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Roof Ownership
-              </label>
-              <select
-                value={roofOwnership}
-                onChange={(e) => setRoofOwnership(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
-              >
-                <option value="" className="bg-slate-900 text-slate-400">Select Ownership</option>
-                <option value="Owned" className="bg-slate-900 text-white">Owned</option>
-                <option value="Rented" className="bg-slate-900 text-white">Rented</option>
-                <option value="Leased" className="bg-slate-900 text-white">Leased</option>
-                <option value="Shared" className="bg-slate-900 text-white">Shared</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Roof Type & Lead Source */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Roof Type
-              </label>
-              <select
-                value={roofType}
-                onChange={(e) => setRoofType(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
-              >
-                <option value="" className="bg-slate-900 text-slate-400">Select Roof Type</option>
-                <option value="Concrete Flat" className="bg-slate-900 text-white">Concrete Flat / RCC</option>
-                <option value="Metal Sheet" className="bg-slate-900 text-white">Metal Sheet / Tin Shed</option>
-                <option value="Tile" className="bg-slate-900 text-white">Tiled Roof / Slanted</option>
-                <option value="Asbestos Sheet" className="bg-slate-900 text-white">Asbestos Sheet</option>
-                <option value="Open Terrace" className="bg-slate-900 text-white">Open Terrace</option>
-              </select>
-            </div>
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Lead Source
@@ -363,25 +304,23 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 <option value="Direct Walk-in" className="bg-slate-900 text-white">Direct Walk-in</option>
               </select>
             </div>
-          </div>
-
-          {/* Assigned Executive */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Assigned Executive
-            </label>
-            <select
-              value={assignedExecutive}
-              onChange={(e) => setAssignedExecutive(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
-            >
-              <option value="" className="bg-slate-900 text-slate-400">Select Executive</option>
-              {executives.map((exec) => (
-                <option key={exec.id} value={exec.id} className="bg-slate-900 text-white">
-                  {exec.full_name} ({exec.role ? exec.role.replace('_', ' ') : 'Executive'})
-                </option>
-              ))}
-            </select>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Assigned Executive
+              </label>
+              <select
+                value={assignedExecutive}
+                onChange={(e) => setAssignedExecutive(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
+              >
+                <option value="" className="bg-slate-900 text-slate-400">Select Executive</option>
+                {executives.map((exec) => (
+                  <option key={exec.id} value={exec.id} className="bg-slate-900 text-white">
+                    {exec.full_name} ({exec.role ? exec.role.replace('_', ' ') : 'Executive'})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Action Buttons */}

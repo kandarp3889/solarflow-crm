@@ -19,7 +19,6 @@ import {
   Trash2
 } from 'lucide-react';
 import { Lead, LeadActivity, LeadNote } from '../../types';
-import { LeadScoreBadge } from './LeadScoreBadge';
 import { api } from '../../services/api';
 import { EditLeadModal } from './EditLeadModal';
 
@@ -166,7 +165,6 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
               <span className="px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
                 {lead.lead_id}
               </span>
-              <LeadScoreBadge score={lead.lead_score} category={lead.score_category} />
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30">
                 {stageLabels[lead.stage] || lead.stage}
               </span>
@@ -267,23 +265,15 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
               </span>
             </div>
             <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800">
-              <span className="text-slate-400 block text-[11px]">Roof Type & Area</span>
+              <span className="text-slate-400 block text-[11px]">Available Roof Area</span>
               <span className="font-bold text-slate-200 mt-0.5 block">
-                {lead.roof_type} ({lead.roof_area_sqft} sq.ft)
+                {lead.roof_area_sqft ? `${lead.roof_area_sqft} sq.ft` : 'Area pending survey'}
               </span>
             </div>
             <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800 flex flex-col justify-between">
-              <span className="text-slate-400 block text-[11px] flex items-center justify-between">
-                <span>Consumer Number</span>
-                <button
-                  onClick={() => setIsEditModalOpen(true)}
-                  className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold cursor-pointer underline"
-                >
-                  Edit
-                </button>
-              </span>
-              <span className="font-mono font-bold text-amber-400 mt-0.5 block truncate">
-                {lead.consumer_number || 'Not recorded'}
+              <span className="text-slate-400 block text-[11px]">Property Type</span>
+              <span className="font-bold text-slate-200 mt-0.5 block">
+                {lead.property_type || 'Residential'}
               </span>
             </div>
           </div>
@@ -315,13 +305,6 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
             Opportunity & Financials
           </h3>
           <div className="space-y-3 text-xs">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">Estimated Deal Value:</span>
-              <span className="text-base font-bold text-emerald-400">
-                ₹{lead.estimated_value.toLocaleString()}
-              </span>
-            </div>
-
             <div className="space-y-1">
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-slate-400">Win Probability:</span>

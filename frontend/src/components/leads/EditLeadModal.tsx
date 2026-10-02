@@ -49,7 +49,6 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
   const [customerName, setCustomerName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [email, setEmail] = useState('');
-  const [consumerNumber, setConsumerNumber] = useState('');
   const [address, setAddress] = useState('');
   const [monthlyBill, setMonthlyBill] = useState('');
   const [recommendedKw, setRecommendedKw] = useState('');
@@ -58,8 +57,6 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
   const [city, setCity] = useState('');
   const [pincode, setPincode] = useState('');
   const [propertyType, setPropertyType] = useState('Residential');
-  const [roofOwnership, setRoofOwnership] = useState('Owned');
-  const [roofType, setRoofType] = useState('Concrete Flat');
   const [leadSource, setLeadSource] = useState('Website');
   const [stage, setStage] = useState('new_lead');
   const [assignedExecutive, setAssignedExecutive] = useState('');
@@ -69,7 +66,6 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
       setCustomerName(lead.full_name || '');
       setMobileNumber(lead.phone || '');
       setEmail(lead.email || '');
-      setConsumerNumber(lead.consumer_number || '');
       setAddress(lead.address || '');
       setCity(lead.city || '');
       setState(lead.state || '');
@@ -77,8 +73,6 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
       setMonthlyBill(lead.monthly_bill ? lead.monthly_bill.toString() : '');
       setRecommendedKw(lead.recommended_kw ? lead.recommended_kw.toString() : '');
       setPropertyType(lead.property_type || 'Residential');
-      setRoofOwnership(lead.roof_ownership || 'Owned');
-      setRoofType(lead.roof_type || 'Concrete Flat');
       setLeadSource(lead.lead_source || 'Website');
       setStage(lead.stage || 'new_lead');
       setAssignedExecutive(lead.assigned_to_id ? lead.assigned_to_id.toString() : '');
@@ -139,7 +133,6 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
         full_name: customerName.trim(),
         phone: mobileNumber.trim(),
         email: email.trim() || undefined,
-        consumer_number: consumerNumber.trim() || undefined,
         address: address.trim() || undefined,
         city: city.trim() || undefined,
         state: state || undefined,
@@ -147,8 +140,6 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
         monthly_bill: billAmount,
         recommended_kw: kw,
         property_type: propertyType || 'Residential',
-        roof_ownership: roofOwnership || 'Owned',
-        roof_type: roofType || 'Concrete Flat',
         lead_source: leadSource || 'Website',
         stage: stage || 'new_lead',
         assigned_to_id: assignedExecutive ? parseInt(assignedExecutive) : undefined,
@@ -188,7 +179,7 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Update customer contact info, consumer number, rooftop specs, and stage.
+                Update customer contact info, property specs, and stage.
               </p>
             </div>
           </div>
@@ -339,56 +330,8 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
             </div>
           </div>
 
-          {/* Consumer Number & Roof Ownership (Consumer Number is placed before Roof Ownership) */}
+          {/* Property Type & Lead Source */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
-                <span>Consumer Number</span>
-                <span className="text-[10px] text-amber-400 font-mono font-medium">CA / Meter No</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. 1029384756"
-                value={consumerNumber}
-                onChange={(e) => setConsumerNumber(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500 font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Roof Ownership
-              </label>
-              <select
-                value={roofOwnership}
-                onChange={(e) => setRoofOwnership(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
-              >
-                <option value="Owned" className="bg-slate-900 text-white">Owned</option>
-                <option value="Rented" className="bg-slate-900 text-white">Rented</option>
-                <option value="Leased" className="bg-slate-900 text-white">Leased</option>
-                <option value="Shared" className="bg-slate-900 text-white">Shared</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Roof Type & Property Type */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Roof Type
-              </label>
-              <select
-                value={roofType}
-                onChange={(e) => setRoofType(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
-              >
-                <option value="Concrete Flat" className="bg-slate-900 text-white">Concrete Flat / RCC</option>
-                <option value="Metal Sheet" className="bg-slate-900 text-white">Metal Sheet / Tin Shed</option>
-                <option value="Tile" className="bg-slate-900 text-white">Tiled Roof / Slanted</option>
-                <option value="Asbestos Sheet" className="bg-slate-900 text-white">Asbestos Sheet</option>
-                <option value="Open Terrace" className="bg-slate-900 text-white">Open Terrace</option>
-              </select>
-            </div>
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Property Type
@@ -404,9 +347,27 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
                 <option value="Agricultural" className="bg-slate-900 text-white">Agricultural</option>
               </select>
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Lead Source
+              </label>
+              <select
+                value={leadSource}
+                onChange={(e) => setLeadSource(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
+              >
+                <option value="Website" className="bg-slate-900 text-white">Website</option>
+                <option value="WhatsApp" className="bg-slate-900 text-white">WhatsApp</option>
+                <option value="Google Ads" className="bg-slate-900 text-white">Google Ads</option>
+                <option value="Facebook Ads" className="bg-slate-900 text-white">Facebook Ads</option>
+                <option value="Instagram" className="bg-slate-900 text-white">Instagram</option>
+                <option value="Referral" className="bg-slate-900 text-white">Referral</option>
+                <option value="Direct Walk-in" className="bg-slate-900 text-white">Direct Walk-in</option>
+              </select>
+            </div>
           </div>
 
-          {/* Lead Stage & Lead Source */}
+          {/* Lead Stage & Assigned Executive */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
@@ -440,28 +401,6 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Lead Source
-              </label>
-              <select
-                value={leadSource}
-                onChange={(e) => setLeadSource(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
-              >
-                <option value="Website" className="bg-slate-900 text-white">Website</option>
-                <option value="WhatsApp" className="bg-slate-900 text-white">WhatsApp</option>
-                <option value="Google Ads" className="bg-slate-900 text-white">Google Ads</option>
-                <option value="Facebook Ads" className="bg-slate-900 text-white">Facebook Ads</option>
-                <option value="Instagram" className="bg-slate-900 text-white">Instagram</option>
-                <option value="Referral" className="bg-slate-900 text-white">Referral</option>
-                <option value="Direct Walk-in" className="bg-slate-900 text-white">Direct Walk-in</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Assigned Executive & Follow-up Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Assigned Executive
               </label>
               <select
@@ -477,17 +416,19 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Next Follow-up Date
-              </label>
-              <input
-                type="date"
-                value={followUpDate}
-                onChange={(e) => setFollowUpDate(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer [color-scheme:dark]"
-              />
-            </div>
+          </div>
+
+          {/* Follow-up Date */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Next Follow-up Date
+            </label>
+            <input
+              type="date"
+              value={followUpDate}
+              onChange={(e) => setFollowUpDate(e.target.value)}
+              className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer [color-scheme:dark]"
+            />
           </div>
 
           {/* Action Buttons */}

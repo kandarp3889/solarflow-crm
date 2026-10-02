@@ -27,8 +27,7 @@ def qualify_lead_ai(
         "monthly_bill": lead.monthly_bill,
         "roof_area_sqft": lead.roof_area_sqft,
         "property_type": lead.property_type,
-        "lead_source": lead.lead_source,
-        "lead_score": lead.lead_score
+        "lead_source": lead.lead_source
     }
     result = AIAssistantService.qualify_lead(lead_dict)
     return AIQualifyResponse(**result)

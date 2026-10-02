@@ -27,14 +27,11 @@ def get_report_data(
                 "id": l.lead_id,
                 "name": l.full_name,
                 "phone": l.phone,
-                "consumer_number": l.consumer_number or "",
                 "city": l.city,
                 "system_size_kw": l.recommended_kw or l.interested_kw,
                 "bill": l.monthly_bill,
                 "source": l.lead_source,
                 "stage": l.stage,
-                "score": l.lead_score,
-                "category": l.score_category,
                 "created_at": l.created_at.strftime("%Y-%m-%d")
             }
             for l in items
@@ -47,7 +44,7 @@ def get_report_data(
                 "id": l.lead_id,
                 "customer": l.full_name,
                 "system_size_kw": l.recommended_kw or l.interested_kw,
-                "deal_value": l.estimated_value,
+                "deal_value": l.quotations[0].final_price if l.quotations else 0.0,
                 "sales_rep": l.assigned_to.full_name if l.assigned_to else "Unassigned",
                 "source": l.lead_source,
                 "city": l.city,

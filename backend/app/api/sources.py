@@ -39,8 +39,8 @@ def get_sources_analytics(
             Quotation.company_id == company.id,
             Lead.lead_source == s.name
         ).count()
-        revenue = db.query(func.sum(Lead.estimated_value)).filter(
-            Lead.company_id == company.id,
+        revenue = db.query(func.sum(Quotation.final_price)).join(Lead, Quotation.lead_id == Lead.id).filter(
+            Quotation.company_id == company.id,
             Lead.lead_source == s.name,
             Lead.stage == "won"
         ).scalar() or 0.0

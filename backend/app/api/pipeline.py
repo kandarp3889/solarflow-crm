@@ -91,7 +91,7 @@ def get_pipeline_stages(
     columns = []
     for s in stages:
         stage_leads = stages_dict.get(s.key, [])
-        total_val = sum(item.estimated_value or 0.0 for item in stage_leads)
+        total_val = 0.0
         columns.append({
             "id": s.key,            # Keep "id": key for backward compatibility with frontend col.id
             "stage_id": s.id,       # Database record ID

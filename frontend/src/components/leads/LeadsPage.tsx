@@ -16,7 +16,6 @@ import {
   Edit
 } from 'lucide-react';
 import { Lead } from '../../types';
-import { LeadScoreBadge } from './LeadScoreBadge';
 import { api } from '../../services/api';
 import { EditLeadModal } from './EditLeadModal';
 import { getStageColorConfig } from '../pipeline/PipelineStagesModal';
@@ -43,7 +42,6 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
-  const [scoreFilter, setScoreFilter] = useState('');
 
   // Bulk actions state
   const [bulkRepId, setBulkRepId] = useState<number>(3);
@@ -57,8 +55,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
       const data = await api.getLeads({
         search: search.trim() || undefined,
         stage: stageFilter || undefined,
-        source: sourceFilter || undefined,
-        score_category: scoreFilter || undefined
+        source: sourceFilter || undefined
       });
       setLeads(data);
     } catch (e) {
@@ -88,7 +85,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
     fetchLeads();
     fetchTeam();
     fetchPipelineStages();
-  }, [stageFilter, sourceFilter, scoreFilter, refreshTrigger]);
+  }, [stageFilter, sourceFilter, refreshTrigger]);
 
   useEffect(() => {
     const handleDataUpdate = () => {
@@ -98,7 +95,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
     return () => {
       window.removeEventListener('crm-data-updated', handleDataUpdate);
     };
-  }, [stageFilter, sourceFilter, scoreFilter]);
+  }, [stageFilter, sourceFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,7 +188,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
         <div>
           <h2 className="text-xl font-bold text-white font-display">Solar Inquiries & Leads CRM</h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Manage, qualify, and assign rooftop solar prospects with automated scoring and tracking.
+            Manage, qualify, and assign rooftop solar prospects with real-time status and tracking.
           </p>
         </div>
 
@@ -269,18 +266,6 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
               <option value="Facebook">Facebook Ads</option>
               <option value="Referral">Customer Referral</option>
               <option value="Phone">Direct Phone</option>
-            </select>
-
-            {/* Score Filter */}
-            <select
-              value={scoreFilter}
-              onChange={(e) => setScoreFilter(e.target.value)}
-              className="px-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-amber-500 cursor-pointer"
-            >
-              <option value="">All Scores</option>
-              <option value="hot">🔥 Hot Leads (&gt;80)</option>
-              <option value="warm">☀️ Warm Leads (50-79)</option>
-              <option value="cold">❄️ Cold Leads (&lt;50)</option>
             </select>
 
             <button
@@ -372,15 +357,12 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                   </button>
                 </th>
                 <th className="py-3.5 px-3">Lead ID</th>
-                <th className="py-3.5 px-3">Consumer No</th>
                 <th className="py-3.5 px-3">Customer & Location</th>
                 <th className="py-3.5 px-3">Phone & Source</th>
                 <th className="py-3.5 px-3">System Size</th>
                 <th className="py-3.5 px-3">Monthly Bill</th>
-                <th className="py-3.5 px-3">Est. Value</th>
                 <th className="py-3.5 px-3">Assigned Rep</th>
                 <th className="py-3.5 px-3">Stage</th>
-                <th className="py-3.5 px-3">Lead Score</th>
                 <th className="py-3.5 px-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -388,14 +370,14 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
               {loading ? (
                 [...Array(6)].map((_, i) => (
                   <tr key={i}>
-                    <td colSpan={12} className="py-4 px-4">
+                    <td colSpan={9} className="py-4 px-4">
                       <div className="h-6 rounded bg-slate-800/40 animate-pulse" />
                     </td>
                   </tr>
                 ))
               ) : leads.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="py-12 text-center text-slate-500">
+                  <td colSpan={9} className="py-12 text-center text-slate-500">
                     No solar leads matching your filters. Try clearing filters or adding a new lead.
                   </td>
                 </tr>
@@ -431,22 +413,6 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {l.consumer_number ? (
-                          <span className="inline-flex items-center font-mono font-bold text-[11px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-400/25 whitespace-nowrap">
-                            {l.consumer_number}
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => setEditingLead(l)}
-                            title="Click to add Consumer Number"
-                            className="inline-flex items-center text-[10px] text-slate-500 hover:text-amber-400 transition-colors cursor-pointer"
-                          >
-                            <span>— (Add)</span>
-                          </button>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-3">
                         <div className="min-w-[130px]">
                           <button
                             onClick={() => onSelectLead(l.id)}
@@ -457,11 +423,6 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                           <span className="text-[11px] text-slate-400 truncate block">
                             {l.city || 'State Capital'} • {l.property_type}
                           </span>
-                          {l.consumer_number && (
-                            <span className="text-[10px] font-mono text-amber-400/90 truncate block mt-0.5">
-                              CA: {l.consumer_number}
-                            </span>
-                          )}
                         </div>
                       </td>
 
@@ -472,15 +433,10 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
 
                       <td className="py-3.5 px-3">
                         <span className="font-bold text-amber-400">{l.recommended_kw} kW</span>
-                        <span className="text-[10px] text-slate-400 block">{l.roof_type}</span>
                       </td>
 
                       <td className="py-3.5 px-3 font-semibold text-slate-200">
                         ₹{l.monthly_bill.toLocaleString()}
-                      </td>
-
-                      <td className="py-3.5 px-3 font-bold text-emerald-400">
-                        ₹{(l.estimated_value / 100000).toFixed(1)}L
                       </td>
 
                       <td className="py-3.5 px-3 text-slate-300">
@@ -500,10 +456,6 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                             </span>
                           );
                         })()}
-                      </td>
-
-                      <td className="py-3.5 px-3">
-                        <LeadScoreBadge score={l.lead_score} category={l.score_category} />
                       </td>
 
                       <td className="py-3.5 px-3 text-right">

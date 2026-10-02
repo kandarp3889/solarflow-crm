@@ -13,7 +13,6 @@ from app.schemas.schemas import (
     LeadNoteCreate, LeadNoteResponse, LeadActivityResponse,
     BulkAssignRequest, BulkStatusRequest
 )
-from app.services.lead_scoring import calculate_lead_score
 from app.services.automation_engine import process_automation_event
 from app.services.notification_service import (
     notify_lead_created, notify_lead_updated, notify_lead_note_added,
@@ -29,7 +28,6 @@ def get_leads(
     stage: Optional[str] = None,
     source: Optional[str] = None,
     assigned_to: Optional[int] = None,
-    score_category: Optional[str] = None,
     city: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
@@ -46,8 +44,7 @@ def get_leads(
                 Lead.phone.ilike(s),
                 Lead.email.ilike(s),
                 Lead.lead_id.ilike(s),
-                Lead.city.ilike(s),
-                Lead.consumer_number.ilike(s)
+                Lead.city.ilike(s)
             )
         )
     if stage:
@@ -56,8 +53,6 @@ def get_leads(
         query = query.filter(Lead.lead_source == source)
     if assigned_to:
         query = query.filter(Lead.assigned_to_id == assigned_to)
-    if score_category:
-        query = query.filter(Lead.score_category == score_category.lower())
     if city:
         query = query.filter(Lead.city.ilike(f"%{city}%"))
 
@@ -83,31 +78,12 @@ def create_lead(
     count = db.query(Lead).filter(Lead.company_id == company.id).count() + 1
     lead_code = f"SOL-2026-{count:04d}"
 
-    # Calculate smart lead score
-    score, category = calculate_lead_score(
-        monthly_bill=lead_in.monthly_bill or 0.0,
-        roof_area_sqft=lead_in.roof_area_sqft or 0.0,
-        system_size_kw=lead_in.recommended_kw or lead_in.interested_kw or 0.0,
-        property_type=lead_in.property_type or "Residential",
-        lead_source=lead_in.lead_source or "Website",
-        battery_required=lead_in.battery_required or False,
-        ev_requirement=lead_in.ev_requirement or False
-    )
-
-    # Estimate default project value if not specified
-    kw = lead_in.recommended_kw or lead_in.interested_kw or 5.0
-    est_value = lead_in.estimated_value or (kw * 52000.0)
-
     lead_data = lead_in.dict()
-    lead_data.pop("estimated_value", None)
 
     new_lead = Lead(
         **lead_data,
         company_id=company.id,
-        lead_id=lead_code,
-        lead_score=score,
-        score_category=category,
-        estimated_value=est_value
+        lead_id=lead_code
     )
     db.add(new_lead)
     db.commit()
@@ -120,7 +96,7 @@ def create_lead(
         user_id=current_user.id,
         activity_type="lead_created",
         title="Lead Captured",
-        description=f"Inquiry captured from {new_lead.lead_source} with score {score} ({category.upper()})."
+        description=f"Inquiry captured from {new_lead.lead_source}."
     )
     db.add(act)
     db.commit()
@@ -379,17 +355,17 @@ def export_leads_csv(
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow([
-        "Lead ID", "Name", "Phone", "Email", "Consumer Number", "City", "State", "Property Type",
-        "Monthly Bill", "System Size (kW)", "Roof Type", "Roof Area (sqft)",
-        "Source", "Stage", "Score", "Category", "Estimated Value", "Created Date"
+        "Lead ID", "Name", "Phone", "Email", "City", "State", "Property Type",
+        "Monthly Bill", "System Size (kW)", "Roof Area (sqft)",
+        "Source", "Stage", "Created Date"
     ])
 
     for l in leads:
         writer.writerow([
-            l.lead_id, l.full_name, l.phone, l.email or "", l.consumer_number or "", l.city or "", l.state or "",
+            l.lead_id, l.full_name, l.phone, l.email or "", l.city or "", l.state or "",
             l.property_type, l.monthly_bill, l.recommended_kw or l.interested_kw,
-            l.roof_type, l.roof_area_sqft, l.lead_source, l.stage,
-            l.lead_score, l.score_category, l.estimated_value, l.created_at.strftime("%Y-%m-%d")
+            l.roof_area_sqft, l.lead_source, l.stage,
+            l.created_at.strftime("%Y-%m-%d")
         ])
 
     csv_data = output.getvalue()

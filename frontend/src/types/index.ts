@@ -162,7 +162,6 @@ export interface Lead {
   lead_id: string;
   full_name: string;
   phone: string;
-  whatsapp?: string;
   email?: string;
   address?: string;
   city?: string;
@@ -171,23 +170,13 @@ export interface Lead {
 
   property_type: string;
   monthly_bill: number;
-  consumption_kwh: number;
   recommended_kw: number;
-  interested_kw: number;
-  roof_area_sqft: number;
-  electricity_provider?: string;
-  existing_solar: boolean;
-  battery_required: boolean;
-  battery_capacity_kwh: number;
-  ev_requirement: boolean;
 
   lead_source: string;
   assigned_to_id?: number;
   assigned_to_name?: string;
   stage: LeadStage;
   win_probability_pct: number;
-  expected_closing_date?: string;
-  lost_reason?: string;
   next_follow_up_date?: string;
 
   created_at: string;

@@ -30,6 +30,8 @@ wheels/
 venv/
 ENV/
 *.db
+*.db.*
+*.backup*
 *.sqlite3
 
 # Node / Vite Frontend

@@ -356,15 +356,15 @@ def export_leads_csv(
     writer = csv.writer(output)
     writer.writerow([
         "Lead ID", "Name", "Phone", "Email", "City", "State", "Property Type",
-        "Monthly Bill", "System Size (kW)", "Roof Area (sqft)",
+        "Monthly Bill", "System Size (kW)",
         "Source", "Stage", "Created Date"
     ])
 
     for l in leads:
         writer.writerow([
             l.lead_id, l.full_name, l.phone, l.email or "", l.city or "", l.state or "",
-            l.property_type, l.monthly_bill, l.recommended_kw or l.interested_kw,
-            l.roof_area_sqft, l.lead_source, l.stage,
+            l.property_type, l.monthly_bill, l.recommended_kw,
+            l.lead_source, l.stage,
             l.created_at.strftime("%Y-%m-%d")
         ])
 

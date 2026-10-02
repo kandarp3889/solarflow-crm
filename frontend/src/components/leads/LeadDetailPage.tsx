@@ -7,8 +7,6 @@ import {
   MapPin,
   Calendar,
   Sun,
-  Battery,
-  Car,
   Home,
   FileSpreadsheet,
   ClipboardCheck,
@@ -221,10 +219,6 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
               <span className="font-semibold text-slate-200">{lead.phone}</span>
             </div>
             <div>
-              <span className="text-slate-400 block">WhatsApp</span>
-              <span className="font-semibold text-slate-200">{lead.whatsapp || lead.phone}</span>
-            </div>
-            <div>
               <span className="text-slate-400 block">Email Address</span>
               <span className="font-semibold text-slate-200">{lead.email || 'Not provided'}</span>
             </div>
@@ -261,41 +255,21 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
             <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800">
               <span className="text-slate-400 block text-[11px]">Estimated Monthly Units</span>
               <span className="font-bold text-slate-200 text-sm mt-0.5 block">
-                {lead.consumption_kwh ? `${lead.consumption_kwh} kWh` : `${lead.recommended_kw * 120} kWh`}
+                ~{Math.round((lead.recommended_kw || 3.0) * 120)} kWh
               </span>
             </div>
             <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800">
-              <span className="text-slate-400 block text-[11px]">Available Roof Area</span>
-              <span className="font-bold text-slate-200 mt-0.5 block">
-                {lead.roof_area_sqft ? `${lead.roof_area_sqft} sq.ft` : 'Area pending survey'}
-              </span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800 flex flex-col justify-between">
               <span className="text-slate-400 block text-[11px]">Property Type</span>
               <span className="font-bold text-slate-200 mt-0.5 block">
                 {lead.property_type || 'Residential'}
               </span>
             </div>
-          </div>
-
-          <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1.5 text-slate-300">
-              <Battery className="w-4 h-4 text-emerald-400" />
-              <span>Battery Storage:</span>
-            </span>
-            <span className={`font-semibold ${lead.battery_required ? 'text-emerald-400' : 'text-slate-500'}`}>
-              {lead.battery_required ? 'Yes (Requested)' : 'Grid-Tied Only'}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1.5 text-slate-300">
-              <Car className="w-4 h-4 text-cyan-400" />
-              <span>EV Charger Provision:</span>
-            </span>
-            <span className={`font-semibold ${lead.ev_requirement ? 'text-cyan-400' : 'text-slate-500'}`}>
-              {lead.ev_requirement ? 'Required' : 'None'}
-            </span>
+            <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800">
+              <span className="text-slate-400 block text-[11px]">State / Region</span>
+              <span className="font-bold text-slate-200 mt-0.5 block truncate">
+                {lead.state || 'Gujarat'}
+              </span>
+            </div>
           </div>
         </div>
 

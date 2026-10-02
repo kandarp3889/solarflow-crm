@@ -181,7 +181,6 @@ class Lead(Base):
     # Customer Contact Info
     full_name = Column(String(255), nullable=False, index=True)
     phone = Column(String(50), nullable=False, index=True)
-    whatsapp = Column(String(50), nullable=True)
     email = Column(String(255), nullable=True, index=True)
     address = Column(Text, nullable=True)
     city = Column(String(100), nullable=True, index=True)
@@ -191,23 +190,13 @@ class Lead(Base):
     # Solar Requirements
     property_type = Column(String(50), default="Residential") # Residential, Commercial, Industrial, Agricultural
     monthly_bill = Column(Float, default=0.0) # In currency, e.g. INR ₹
-    consumption_kwh = Column(Float, default=0.0) # Units per month
     recommended_kw = Column(Float, default=0.0)
-    interested_kw = Column(Float, default=0.0)
-    roof_area_sqft = Column(Float, default=0.0)
-    electricity_provider = Column(String(100), nullable=True)
-    existing_solar = Column(Boolean, default=False)
-    battery_required = Column(Boolean, default=False)
-    battery_capacity_kwh = Column(Float, default=0.0)
-    ev_requirement = Column(Boolean, default=False)
 
     # Sales & Pipeline Info
     lead_source = Column(String(50), default="Website", index=True) # Website, WhatsApp, Facebook, Google Ads, etc.
     assigned_to_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     stage = Column(String(50), default=LeadStage.NEW_LEAD.value, index=True)
     win_probability_pct = Column(Integer, default=20)
-    expected_closing_date = Column(DateTime, nullable=True)
-    lost_reason = Column(String(255), nullable=True)
     next_follow_up_date = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, index=True)

@@ -119,7 +119,6 @@ class LeadActivityResponse(BaseModel):
 class LeadBase(BaseModel):
     full_name: str
     phone: str
-    whatsapp: Optional[str] = None
     email: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
@@ -128,21 +127,12 @@ class LeadBase(BaseModel):
 
     property_type: Optional[str] = "Residential"
     monthly_bill: Optional[float] = 0.0
-    consumption_kwh: Optional[float] = 0.0
     recommended_kw: Optional[float] = 0.0
-    interested_kw: Optional[float] = 0.0
-    roof_area_sqft: Optional[float] = 0.0
-    electricity_provider: Optional[str] = None
-    existing_solar: Optional[bool] = False
-    battery_required: Optional[bool] = False
-    battery_capacity_kwh: Optional[float] = 0.0
-    ev_requirement: Optional[bool] = False
 
     lead_source: Optional[str] = "Website"
     assigned_to_id: Optional[int] = None
     stage: Optional[str] = "new_lead"
     win_probability_pct: Optional[int] = 20
-    expected_closing_date: Optional[datetime] = None
     next_follow_up_date: Optional[datetime] = None
 
 class LeadCreate(LeadBase):
@@ -151,7 +141,6 @@ class LeadCreate(LeadBase):
 class LeadUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
-    whatsapp: Optional[str] = None
     email: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
@@ -160,29 +149,18 @@ class LeadUpdate(BaseModel):
 
     property_type: Optional[str] = None
     monthly_bill: Optional[float] = None
-    consumption_kwh: Optional[float] = None
     recommended_kw: Optional[float] = None
-    interested_kw: Optional[float] = None
-    roof_area_sqft: Optional[float] = None
-    electricity_provider: Optional[str] = None
-    existing_solar: Optional[bool] = None
-    battery_required: Optional[bool] = None
-    battery_capacity_kwh: Optional[float] = None
-    ev_requirement: Optional[bool] = None
 
     lead_source: Optional[str] = None
     assigned_to_id: Optional[int] = None
     stage: Optional[str] = None
     win_probability_pct: Optional[int] = None
-    expected_closing_date: Optional[datetime] = None
-    lost_reason: Optional[str] = None
     next_follow_up_date: Optional[datetime] = None
 
 class LeadResponse(LeadBase):
     id: int
     company_id: int
     lead_id: str
-    lost_reason: Optional[str] = None
     next_follow_up_date: Optional[datetime] = None
     assigned_to_name: Optional[str] = None
     created_at: datetime

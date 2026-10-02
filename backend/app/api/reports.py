@@ -28,7 +28,7 @@ def get_report_data(
                 "name": l.full_name,
                 "phone": l.phone,
                 "city": l.city,
-                "system_size_kw": l.recommended_kw or l.interested_kw,
+                "system_size_kw": l.recommended_kw,
                 "bill": l.monthly_bill,
                 "source": l.lead_source,
                 "stage": l.stage,
@@ -43,7 +43,7 @@ def get_report_data(
             {
                 "id": l.lead_id,
                 "customer": l.full_name,
-                "system_size_kw": l.recommended_kw or l.interested_kw,
+                "system_size_kw": l.recommended_kw,
                 "deal_value": l.quotations[0].final_price if l.quotations else 0.0,
                 "sales_rep": l.assigned_to.full_name if l.assigned_to else "Unassigned",
                 "source": l.lead_source,

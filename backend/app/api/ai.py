@@ -25,7 +25,7 @@ def qualify_lead_ai(
 
     lead_dict = {
         "monthly_bill": lead.monthly_bill,
-        "roof_area_sqft": lead.roof_area_sqft,
+        "recommended_kw": lead.recommended_kw,
         "property_type": lead.property_type,
         "lead_source": lead.lead_source
     }
@@ -44,7 +44,7 @@ def generate_whatsapp_pitch_ai(
 
     lead_dict = {
         "full_name": lead.full_name,
-        "recommended_kw": lead.recommended_kw or lead.interested_kw,
+        "recommended_kw": lead.recommended_kw,
         "monthly_bill": lead.monthly_bill,
         "phone": lead.phone
     }
@@ -68,7 +68,7 @@ def summarize_proposal_ai(
     lead_dict = {
         "full_name": lead.full_name,
         "stage": lead.stage,
-        "recommended_kw": lead.recommended_kw or lead.interested_kw,
+        "recommended_kw": lead.recommended_kw,
         "monthly_bill": lead.monthly_bill
     }
     activities = [{"title": a.title} for a in lead.activities]

@@ -77,9 +77,7 @@ def run_tests():
         "property_type": "Residential",
         "monthly_bill": 8500.0,
         "recommended_kw": 8.0,
-        "roof_area_sqft": 900.0,
-        "lead_source": "WhatsApp",
-        "battery_required": True
+        "lead_source": "WhatsApp"
     }
     status, lead = make_req("/leads", method="POST", data=new_lead_payload, headers=auth_headers)
     assert status == 200

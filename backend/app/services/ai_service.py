@@ -11,7 +11,6 @@ class AIAssistantService:
     @staticmethod
     def qualify_lead(lead: Dict[str, Any]) -> Dict[str, Any]:
         bill = float(lead.get("monthly_bill") or 0)
-        roof = float(lead.get("roof_area_sqft") or 0)
         p_type = lead.get("property_type") or "Residential"
         source = lead.get("lead_source") or "Website"
 
@@ -26,12 +25,7 @@ class AIAssistantService:
         else:
             reasons.append(f"Moderate electricity consumption; 2-3 kW system qualifies for maximum tier-1 rooftop subsidy.")
 
-        if roof >= min_roof_needed and roof > 0:
-            reasons.append(f"Roof area ({roof:,.0f} sq.ft) comfortably accommodates the recommended {suggested_kw} kW array.")
-        elif roof > 0:
-            reasons.append(f"Limited roof space ({roof:,.0f} sq.ft) requires high-efficiency Mono PERC / TOPCon 550W+ bifacial panels.")
-        else:
-            reasons.append("Roof inspection needed during site survey to confirm shadow-free azimuth.")
+        reasons.append(f"Estimated shadow-free roof area requirement of ~{min_roof_needed:,.0f} sq.ft to be verified during site survey.")
 
         if "referral" in source.lower():
             reasons.append("High-intent referral channel with 3.2x higher conversion probability.")
@@ -59,7 +53,7 @@ class AIAssistantService:
     @staticmethod
     def generate_whatsapp_pitch(lead: Dict[str, Any], purpose: str = "initial_pitch") -> str:
         name = lead.get("full_name") or "Valued Customer"
-        kw = lead.get("recommended_kw") or lead.get("interested_kw") or 5.0
+        kw = lead.get("recommended_kw") or 5.0
         bill = lead.get("monthly_bill") or 6000
 
         if purpose == "initial_pitch":

@@ -36,7 +36,13 @@ def ensure_schema_compatibility():
             if engine.dialect.name == "postgresql":
                 conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_permissions JSON DEFAULT '[]'::json;"))
                 conn.execute(text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS custom_roles JSON DEFAULT '[]'::json;"))
-                for col in ["consumer_number", "roof_ownership", "roof_type", "lead_score", "score_category", "estimated_value"]:
+                cols_to_drop = [
+                    "consumer_number", "roof_ownership", "roof_type", "lead_score", "score_category", "estimated_value",
+                    "whatsapp", "interested_kw", "consumption_kwh", "roof_area_sqft", "electricity_provider",
+                    "existing_solar", "battery_required", "battery_capacity_kwh", "ev_requirement",
+                    "expected_closing_date", "lost_reason"
+                ]
+                for col in cols_to_drop:
                     try:
                         conn.execute(text(f"ALTER TABLE leads DROP COLUMN IF EXISTS {col};"))
                     except Exception as drop_err:
@@ -53,7 +59,13 @@ def ensure_schema_compatibility():
                     conn.execute(text("ALTER TABLE companies ADD COLUMN custom_roles JSON DEFAULT '[]'"))
                 lead_result = conn.execute(text("PRAGMA table_info(leads)")).fetchall()
                 lead_cols = [row[1] for row in lead_result]
-                for col in ["consumer_number", "roof_ownership", "roof_type", "lead_score", "score_category", "estimated_value"]:
+                cols_to_drop = [
+                    "consumer_number", "roof_ownership", "roof_type", "lead_score", "score_category", "estimated_value",
+                    "whatsapp", "interested_kw", "consumption_kwh", "roof_area_sqft", "electricity_provider",
+                    "existing_solar", "battery_required", "battery_capacity_kwh", "ev_requirement",
+                    "expected_closing_date", "lost_reason"
+                ]
+                for col in cols_to_drop:
                     if col in lead_cols:
                         try:
                             conn.execute(text(f"ALTER TABLE leads DROP COLUMN {col}"))

@@ -15,7 +15,6 @@ import {
   Sparkles,
   Edit,
   FileText,
-  Paperclip,
   CheckCircle2,
   Clock,
   Layers
@@ -414,10 +413,8 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                       </th>
                       <th className="py-3.5 px-3">Lead ID</th>
                       <th className="py-3.5 px-3">Customer & Location</th>
-                      <th className="py-3.5 px-3">Loan File</th>
                       <th className="py-3.5 px-3">Loan Status</th>
                       <th className="py-3.5 px-3">Installation</th>
-                      <th className="py-3.5 px-3">Net Meter File</th>
                       <th className="py-3.5 px-3">Net Meter</th>
                       <th className="py-3.5 px-3">Inspection</th>
                       <th className="py-3.5 px-3">Subsidy</th>
@@ -507,26 +504,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                               </div>
                             </td>
 
-                            {/* 1. Loan File */}
-                            <td className="py-3.5 px-3">
-                              <button
-                                onClick={() => {
-                                  setSelectedLoanLeadId(l.id);
-                                  setIsLoanModalOpen(true);
-                                }}
-                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 transition-colors group cursor-pointer"
-                                title="View or upload loan documents"
-                              >
-                                <Paperclip className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
-                                <span className="font-semibold text-[11px]">
-                                  {(l.loan_process?.loan_files_count || 0) > 0
-                                    ? `${l.loan_process?.loan_files_count} file(s)`
-                                    : 'Upload'}
-                                </span>
-                              </button>
-                            </td>
-
-                            {/* 2. Loan Status */}
+                            {/* 1. Loan Status */}
                             <td className="py-3.5 px-3">
                               <button
                                 onClick={() => {
@@ -546,54 +524,27 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                               </button>
                             </td>
 
-                            {/* 3. Installation */}
-                            <td className="py-3.5 px-3">
-                              <div className="flex flex-col gap-1">
-                                <button
-                                  onClick={() => {
-                                    setSelectedLoanLeadId(l.id);
-                                    setIsLoanModalOpen(true);
-                                  }}
-                                  className="cursor-pointer text-left"
-                                  title="Update Installation Status"
-                                >
-                                  <span
-                                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getStatusBadgeColor(
-                                      l.loan_process?.installation_status || 'Not Started'
-                                    )}`}
-                                  >
-                                    {l.loan_process?.installation_status || 'Not Started'}
-                                  </span>
-                                </button>
-                                {(l.loan_process?.installation_docs_count || 0) > 0 && (
-                                  <span className="text-[10px] text-slate-400 flex items-center gap-1 font-mono">
-                                    <Paperclip className="w-3 h-3 text-slate-500" />
-                                    {l.loan_process?.installation_docs_count} doc(s)
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-
-                            {/* 4. Net Meter File */}
+                            {/* 2. Installation */}
                             <td className="py-3.5 px-3">
                               <button
                                 onClick={() => {
                                   setSelectedLoanLeadId(l.id);
                                   setIsLoanModalOpen(true);
                                 }}
-                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 transition-colors group cursor-pointer"
-                                title="View or upload Net Metering documents"
+                                className="cursor-pointer text-left"
+                                title="Update Installation Status"
                               >
-                                <Paperclip className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
-                                <span className="font-semibold text-[11px]">
-                                  {(l.loan_process?.net_meter_files_count || 0) > 0
-                                    ? `${l.loan_process?.net_meter_files_count} file(s)`
-                                    : 'Upload'}
+                                <span
+                                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getStatusBadgeColor(
+                                    l.loan_process?.installation_status || 'Not Started'
+                                  )}`}
+                                >
+                                  {l.loan_process?.installation_status || 'Not Started'}
                                 </span>
                               </button>
                             </td>
 
-                            {/* 5. Net Meter */}
+                            {/* 3. Net Meter */}
                             <td className="py-3.5 px-3">
                               <button
                                 onClick={() => {
@@ -613,60 +564,44 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                               </button>
                             </td>
 
-                            {/* 6. Inspection */}
+                            {/* 4. Inspection */}
                             <td className="py-3.5 px-3">
-                              <div className="flex flex-col gap-1">
-                                <button
-                                  onClick={() => {
-                                    setSelectedLoanLeadId(l.id);
-                                    setIsLoanModalOpen(true);
-                                  }}
-                                  className="cursor-pointer text-left"
-                                  title="Update Inspection Status"
+                              <button
+                                onClick={() => {
+                                  setSelectedLoanLeadId(l.id);
+                                  setIsLoanModalOpen(true);
+                                }}
+                                className="cursor-pointer text-left"
+                                title="Update Inspection Status"
+                              >
+                                <span
+                                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getStatusBadgeColor(
+                                    l.loan_process?.inspection_status || 'Not Started'
+                                  )}`}
                                 >
-                                  <span
-                                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getStatusBadgeColor(
-                                      l.loan_process?.inspection_status || 'Not Started'
-                                    )}`}
-                                  >
-                                    {l.loan_process?.inspection_status || 'Not Started'}
-                                  </span>
-                                </button>
-                                {(l.loan_process?.inspection_docs_count || 0) > 0 && (
-                                  <span className="text-[10px] text-slate-400 flex items-center gap-1 font-mono">
-                                    <Paperclip className="w-3 h-3 text-slate-500" />
-                                    {l.loan_process?.inspection_docs_count} doc(s)
-                                  </span>
-                                )}
-                              </div>
+                                  {l.loan_process?.inspection_status || 'Not Started'}
+                                </span>
+                              </button>
                             </td>
 
-                            {/* 7. Subsidy */}
+                            {/* 5. Subsidy */}
                             <td className="py-3.5 px-3">
-                              <div className="flex flex-col gap-1">
-                                <button
-                                  onClick={() => {
-                                    setSelectedLoanLeadId(l.id);
-                                    setIsLoanModalOpen(true);
-                                  }}
-                                  className="cursor-pointer text-left"
-                                  title="Update Subsidy Status"
+                              <button
+                                onClick={() => {
+                                  setSelectedLoanLeadId(l.id);
+                                  setIsLoanModalOpen(true);
+                                }}
+                                className="cursor-pointer text-left"
+                                title="Update Subsidy Status"
+                              >
+                                <span
+                                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getStatusBadgeColor(
+                                    l.loan_process?.subsidy_status || 'Not Started'
+                                  )}`}
                                 >
-                                  <span
-                                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getStatusBadgeColor(
-                                      l.loan_process?.subsidy_status || 'Not Started'
-                                    )}`}
-                                  >
-                                    {l.loan_process?.subsidy_status || 'Not Started'}
-                                  </span>
-                                </button>
-                                {(l.loan_process?.subsidy_docs_count || 0) > 0 && (
-                                  <span className="text-[10px] text-slate-400 flex items-center gap-1 font-mono">
-                                    <Paperclip className="w-3 h-3 text-slate-500" />
-                                    {l.loan_process?.subsidy_docs_count} doc(s)
-                                  </span>
-                                )}
-                              </div>
+                                  {l.loan_process?.subsidy_status || 'Not Started'}
+                                </span>
+                              </button>
                             </td>
 
                             {/* Actions */}

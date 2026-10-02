@@ -18,6 +18,7 @@ import { FollowUpList } from './components/followups/FollowUpList';
 import { CalendarView } from './components/calendar/CalendarView';
 import { SurveyList } from './components/surveys/SurveyList';
 import { QuotationList } from './components/quotations/QuotationList';
+import { InvoicesPage } from './components/invoices/InvoicesPage';
 import { SourceAnalytics } from './components/sources/SourceAnalytics';
 import { TeamManagement } from './components/team/TeamManagement';
 import { AutomationWorkflow } from './components/automation/AutomationWorkflow';
@@ -34,6 +35,7 @@ const TAB_ROLES: Record<string, UserRole[]> = {
   calendar: ['super_admin', 'company_admin', 'sales_manager', 'sales_rep', 'survey_engineer'],
   surveys: ['super_admin', 'company_admin', 'sales_manager', 'sales_rep', 'survey_engineer'],
   quotations: ['super_admin', 'company_admin', 'sales_manager', 'sales_rep'],
+  invoices: ['super_admin', 'company_admin', 'sales_manager', 'sales_rep'],
   sources: ['super_admin', 'company_admin', 'sales_manager'],
   team: ['super_admin', 'company_admin', 'sales_manager'],
   automation: ['super_admin', 'company_admin'],
@@ -216,6 +218,10 @@ const SolarCRMApp: React.FC = () => {
                   onSelectLead={handleSelectLead}
                   onOpenQuickAction={(action) => setQuickActionType(action)}
                 />
+              )}
+
+              {currentTab === 'invoices' && (
+                <InvoicesPage onSelectLead={handleSelectLead} />
               )}
 
               {currentTab === 'sources' && <SourceAnalytics />}

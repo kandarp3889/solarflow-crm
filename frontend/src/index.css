@@ -97,10 +97,27 @@ h1, h2, h3, h4, .font-display {
     background-color: #ffffff !important;
     color: #0f172a !important;
   }
-  .no-print {
+  .no-print,
+  aside,
+  header,
+  nav {
     display: none !important;
   }
   .print-only {
     display: block !important;
+  }
+  #invoice-printable-sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  @page {
+    size: A4;
+    margin: 8mm;
   }
 }

@@ -26,6 +26,7 @@ from app.api.settings import router as settings_router
 from app.api.notifications import router as notifications_router
 from app.api.audit_logs import router as audit_logs_router
 from app.api.loan_process import router as loan_process_router
+from app.api.invoices import router as invoices_router
 
 # Create database tables automatically
 Base.metadata.create_all(bind=engine)
@@ -151,9 +152,23 @@ def ensure_existing_won_leads_have_loan_processes():
     except Exception as e:
         print(f"[!] Won leads loan initialization notice: {e}")
 
+def ensure_default_invoice_settings():
+    try:
+        from app.database import SessionLocal
+        from app.models.models import Company
+        from app.services.invoice_service import get_or_create_invoice_settings
+        db = SessionLocal()
+        companies = db.query(Company).all()
+        for comp in companies:
+            get_or_create_invoice_settings(db, comp.id)
+        db.close()
+    except Exception as e:
+        print(f"[!] Invoice settings initialization notice: {e}")
+
 auto_seed_if_empty()
 ensure_default_pipeline_stages()
 ensure_existing_won_leads_have_loan_processes()
+ensure_default_invoice_settings()
 
 app = FastAPI(
     title="SolarFlow CRM SaaS API",
@@ -219,6 +234,7 @@ app.include_router(settings_router, prefix=settings.API_V1_STR)
 app.include_router(notifications_router, prefix=settings.API_V1_STR)
 app.include_router(audit_logs_router, prefix=settings.API_V1_STR)
 app.include_router(loan_process_router, prefix=settings.API_V1_STR)
+app.include_router(invoices_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():

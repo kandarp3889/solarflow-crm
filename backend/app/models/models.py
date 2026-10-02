@@ -64,6 +64,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "leads:view", "leads:create", "leads:edit", "leads:delete", "leads:export", "leads:assign",
         "pipeline:view", "pipeline:move", "pipeline:close_deals", "pipeline:manage_stages",
         "loans:view", "loans:manage", "loans:upload_docs", "loans:delete_docs",
+        "invoices:view", "invoices:create", "invoices:edit", "invoices:payments", "invoices:cancel", "invoices:settings", "invoices:backup_restore",
         "surveys:view", "surveys:create", "surveys:complete", "surveys:delete",
         "quotations:view", "quotations:create", "quotations:discount", "quotations:delete",
         "followups:view", "followups:manage",
@@ -77,6 +78,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "leads:view", "leads:create", "leads:edit", "leads:export", "leads:assign",
         "pipeline:view", "pipeline:move", "pipeline:close_deals", "pipeline:manage_stages",
         "loans:view", "loans:manage", "loans:upload_docs",
+        "invoices:view", "invoices:create", "invoices:edit", "invoices:payments",
         "surveys:view", "surveys:create",
         "quotations:view", "quotations:create", "quotations:discount",
         "followups:view", "followups:manage",
@@ -89,6 +91,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "leads:view", "leads:create", "leads:edit",
         "pipeline:view", "pipeline:move",
         "loans:view", "loans:manage", "loans:upload_docs",
+        "invoices:view", "invoices:create",
         "quotations:view", "quotations:create",
         "followups:view", "followups:manage",
         "ai:use"
@@ -151,6 +154,8 @@ class Company(Base):
     surveys = relationship("Survey", back_populates="company", cascade="all, delete-orphan")
     pipeline_stages = relationship("PipelineStage", back_populates="company", cascade="all, delete-orphan", order_by="PipelineStage.order_index")
     loan_processes = relationship("LoanProcess", back_populates="company", cascade="all, delete-orphan")
+    invoices = relationship("Invoice", back_populates="company", cascade="all, delete-orphan")
+    invoice_settings = relationship("InvoiceSettings", back_populates="company", uselist=False, cascade="all, delete-orphan")
 
 # -------------------------------------------------------------
 # User (Multi-Tenant)
@@ -216,6 +221,7 @@ class Lead(Base):
     surveys = relationship("Survey", back_populates="lead", cascade="all, delete-orphan")
     quotations = relationship("Quotation", back_populates="lead", cascade="all, delete-orphan")
     loan_process = relationship("LoanProcess", back_populates="lead", uselist=False, cascade="all, delete-orphan")
+    invoices = relationship("Invoice", back_populates="lead", cascade="all, delete-orphan")
 
 # -------------------------------------------------------------
 # Lead Activity Timeline & Notes
@@ -510,4 +516,178 @@ class LoanDocument(Base):
 
     loan_process = relationship("LoanProcess", back_populates="documents")
     uploaded_by = relationship("User")
+
+
+# -------------------------------------------------------------
+# INVOICE MANAGEMENT MODULE (Independent Multi-Tenant)
+# -------------------------------------------------------------
+
+class InvoiceStatus(str, enum.Enum):
+    DRAFT = "draft"
+    ISSUED = "issued"
+    PARTIALLY_PAID = "partially_paid"
+    PAID = "paid"
+    CANCELLED = "cancelled"
+
+
+class InvoiceSettings(Base):
+    __tablename__ = "invoice_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+
+    # Reference Company Details (Pre-filled for TrueSun Energy)
+    company_name = Column(String(255), default="TRUESUN ENERGY", nullable=False)
+    address = Column(Text, default="New Plot Area, Gam Vistar, Sultanpur")
+    contact_number = Column(String(50), default="9974045095")
+    email = Column(String(255), default="info.truesunenergy@gmail.com")
+    website = Column(String(255), default="truesunenergy.in")
+    gstin = Column(String(50), default="24EIVPG5500C1ZI")
+    pan = Column(String(50), default="EIVPG5500C")
+    state_code = Column(String(10), default="24")
+    state_name = Column(String(50), default="Gujarat")
+
+    # Bank Details
+    bank_name = Column(String(255), default="State Bank of India")
+    account_number = Column(String(100), default="44474952500")
+    ifsc_code = Column(String(50), default="SBIN0003268")
+    branch_name = Column(String(255), default="Sultanpur")
+
+    # Numbering & Defaults
+    invoice_prefix = Column(String(20), default="INV-")
+    next_invoice_number = Column(Integer, default=22)
+    default_payment_terms = Column(String(100), default="Immediate / On Delivery")
+    default_terms = Column(Text, default="Looking forward for your business.")
+    declaration = Column(Text, default="We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.")
+    
+    # Assets & Signatures
+    logo_url = Column(String(500), nullable=True)
+    signature_url = Column(String(500), nullable=True)
+    signature_label = Column(String(255), default="For, TRUESUN ENERGY")
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    company = relationship("Company", back_populates="invoice_settings")
+
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    lead_id = Column(Integer, ForeignKey("leads.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    invoice_number = Column(String(50), nullable=False, index=True) # e.g. INV-021, INV-022
+    invoice_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    due_date = Column(DateTime, nullable=True)
+    payment_terms = Column(String(100), nullable=True)
+    status = Column(String(30), default="issued", index=True) # draft, issued, partially_paid, paid, cancelled
+
+    # Immutable Company Snapshot at time of invoice creation
+    company_name_snapshot = Column(String(255), nullable=True)
+    company_address_snapshot = Column(Text, nullable=True)
+    company_contact_snapshot = Column(String(50), nullable=True)
+    company_email_snapshot = Column(String(255), nullable=True)
+    company_website_snapshot = Column(String(255), nullable=True)
+    company_gstin_snapshot = Column(String(50), nullable=True)
+    company_pan_snapshot = Column(String(50), nullable=True)
+    company_state_code_snapshot = Column(String(10), default="24")
+    bank_name_snapshot = Column(String(255), nullable=True)
+    bank_account_snapshot = Column(String(100), nullable=True)
+    bank_ifsc_snapshot = Column(String(50), nullable=True)
+    bank_branch_snapshot = Column(String(255), nullable=True)
+    signature_label_snapshot = Column(String(255), nullable=True)
+
+    # Bill To
+    bill_to_name = Column(String(255), nullable=False)
+    bill_to_address = Column(Text, nullable=True)
+    bill_to_contact = Column(String(50), nullable=True)
+    bill_to_gstin = Column(String(50), nullable=True)
+    bill_to_pos = Column(String(100), default="24-Gujarat")
+
+    # Ship To
+    ship_to_name = Column(String(255), nullable=False)
+    ship_to_address = Column(Text, nullable=True)
+    ship_to_contact = Column(String(50), nullable=True)
+    ship_to_pos = Column(String(100), default="24-Gujarat")
+
+    # Financial Summary
+    subtotal = Column(Float, default=0.0) # Taxable amount sum
+    tax_amount = Column(Float, default=0.0) # Total GST
+    round_off = Column(Float, default=0.0) # Round off adjustment
+    total_amount = Column(Float, default=0.0) # Final amount
+    paid_amount = Column(Float, default=0.0)
+    outstanding_amount = Column(Float, default=0.0)
+    amount_in_words = Column(String(500), nullable=True)
+
+    # Notes & Conditions
+    delivery_terms = Column(String(255), nullable=True)
+    terms_and_conditions = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+
+    # Aggregated HSN Tax Summary Cache (list of dicts)
+    hsn_summary = Column(JSON, default=list)
+
+    pdf_path = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    company = relationship("Company", back_populates="invoices")
+    lead = relationship("Lead", back_populates="invoices")
+    created_by = relationship("User")
+    items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan", order_by="InvoiceItem.sort_order")
+    payments = relationship("InvoicePayment", back_populates="invoice", cascade="all, delete-orphan", order_by="desc(InvoicePayment.payment_date)")
+
+
+class InvoiceItem(Base):
+    __tablename__ = "invoice_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    invoice_id = Column(Integer, ForeignKey("invoices.id", ondelete="CASCADE"), nullable=False, index=True)
+    sort_order = Column(Integer, default=1)
+
+    particulars = Column(String(500), nullable=False)
+    description = Column(Text, nullable=True) # Multiline panel serial numbers, inverter brand/SN, etc.
+    hsn_sac = Column(String(20), default="8541")
+    quantity = Column(Float, default=1.0)
+    unit = Column(String(20), default="SITE") # SITE, NOS, SET, KW
+    unit_price = Column(Float, default=0.0)
+    gst_rate = Column(Float, default=18.0) # 5%, 12%, 18%, 28%
+
+    taxable_amount = Column(Float, default=0.0)
+    cgst_rate = Column(Float, default=0.0)
+    cgst_amount = Column(Float, default=0.0)
+    sgst_rate = Column(Float, default=0.0)
+    sgst_amount = Column(Float, default=0.0)
+    igst_rate = Column(Float, default=0.0)
+    igst_amount = Column(Float, default=0.0)
+    line_total = Column(Float, default=0.0)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    invoice = relationship("Invoice", back_populates="items")
+
+
+class InvoicePayment(Base):
+    __tablename__ = "invoice_payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    invoice_id = Column(Integer, ForeignKey("invoices.id", ondelete="CASCADE"), nullable=False, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    payment_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    amount = Column(Float, nullable=False)
+    payment_method = Column(String(50), nullable=False, default="Bank Transfer") # Bank Transfer, NEFT/RTGS, UPI, Cheque, Cash
+    transaction_reference = Column(String(100), nullable=True) # UTR or Cheque No
+    notes = Column(Text, nullable=True)
+    recorded_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    invoice = relationship("Invoice", back_populates="payments")
+    recorded_by = relationship("User")
+
 

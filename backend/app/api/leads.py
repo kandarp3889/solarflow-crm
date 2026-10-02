@@ -18,6 +18,7 @@ from app.services.notification_service import (
     notify_lead_created, notify_lead_updated, notify_lead_note_added,
     notify_stage_changed, notify_lead_assigned, dispatch_targeted_notification
 )
+from app.services.loan_service import ensure_loan_process_for_lead, build_loan_process_summary
 from app.api.deps import get_current_user, get_current_company
 
 router = APIRouter(prefix="/leads", tags=["Leads"])
@@ -58,12 +59,13 @@ def get_leads(
 
     leads = query.order_by(desc(Lead.created_at)).offset(skip).limit(limit).all()
 
-    # Enrich assigned_to_name
+    # Enrich assigned_to_name and loan_process summary
     result = []
     for l in leads:
         lead_dict = LeadResponse.from_orm(l)
         if l.assigned_to:
             lead_dict.assigned_to_name = l.assigned_to.full_name
+        lead_dict.loan_process = build_loan_process_summary(l.loan_process)
         result.append(lead_dict)
     return result
 
@@ -158,6 +160,12 @@ def get_lead_detail(
         notes_list.append(n_dict)
     res.notes = notes_list
 
+    # Ensure loan process is created if lead is won
+    if lead.stage == "won" and not lead.loan_process:
+        ensure_loan_process_for_lead(db, company.id, lead)
+        db.refresh(lead)
+
+    res.loan_process = build_loan_process_summary(lead.loan_process)
     return res
 
 @router.put("/{lead_id}", response_model=LeadResponse)
@@ -207,6 +215,11 @@ def update_lead(
     db.commit()
     db.refresh(lead)
 
+    # If lead moved to Deal Won, auto-initialize Loan Process
+    if lead_in.stage == "won" and old_stage != "won":
+        ensure_loan_process_for_lead(db, company.id, lead, current_user.id)
+        db.refresh(lead)
+
     # If lead was newly assigned or reassigned, notify the assigned user
     if lead_in.assigned_to_id and lead_in.assigned_to_id != old_assigned:
         notify_lead_assigned(db, company.id, lead, lead.assigned_to_id, current_user)
@@ -220,6 +233,7 @@ def update_lead(
     res = LeadResponse.from_orm(lead)
     if lead.assigned_to:
         res.assigned_to_name = lead.assigned_to.full_name
+    res.loan_process = build_loan_process_summary(lead.loan_process)
     return res
 
 @router.delete("/{lead_id}")
@@ -341,6 +355,12 @@ def bulk_update_status(
             description=f"Stage changed to {req.stage.replace('_', ' ').title()}"
         )
         db.add(act)
+
+    # If bulk updated to won, initialize loan processes
+    if req.stage == "won":
+        won_leads = db.query(Lead).filter(Lead.id.in_(req.lead_ids), Lead.company_id == company.id).all()
+        for wl in won_leads:
+            ensure_loan_process_for_lead(db, company.id, wl, current_user.id)
 
     db.commit()
     return {"message": f"Updated stage to {req.stage} for {len(req.lead_ids)} leads"}

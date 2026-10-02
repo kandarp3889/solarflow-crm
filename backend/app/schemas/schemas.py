@@ -157,6 +157,120 @@ class LeadUpdate(BaseModel):
     win_probability_pct: Optional[int] = None
     next_follow_up_date: Optional[datetime] = None
 
+# -------------------------------------------------------------
+# Loan & Project Execution Workflow Schemas
+# -------------------------------------------------------------
+class LoanDocumentResponse(BaseModel):
+    id: int
+    company_id: int
+    loan_process_id: int
+    lead_id: int
+    stage_category: str
+    file_name: str
+    file_path: str
+    file_size: int
+    mime_type: Optional[str] = None
+    uploaded_by_id: Optional[int] = None
+    uploaded_by_name: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class LoanProcessSummary(BaseModel):
+    id: int
+    loan_process_number: Optional[str] = None
+    loan_status: str = "Not Started"
+    installation_status: str = "Not Started"
+    net_meter_status: str = "Not Started"
+    inspection_status: str = "Not Started"
+    subsidy_status: str = "Not Started"
+    overall_progress_pct: int = 0
+    loan_files_count: int = 0
+    installation_docs_count: int = 0
+    net_meter_files_count: int = 0
+    inspection_docs_count: int = 0
+    subsidy_docs_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+class LoanProcessResponse(BaseModel):
+    id: int
+    company_id: int
+    lead_id: int
+    lead_name: Optional[str] = None
+    lead_code: Optional[str] = None
+    lead_phone: Optional[str] = None
+    system_size_kw: Optional[float] = None
+    monthly_bill: Optional[float] = None
+    loan_process_number: Optional[str] = None
+    
+    # Stage 1: Loan
+    loan_status: str = "Not Started"
+    loan_bank_name: Optional[str] = None
+    loan_amount: Optional[float] = None
+    loan_notes: Optional[str] = None
+
+    # Stage 2: Installation
+    installation_status: str = "Not Started"
+    installer_name: Optional[str] = None
+    installation_date: Optional[datetime] = None
+    installation_notes: Optional[str] = None
+
+    # Stage 3: Net Metering
+    net_meter_status: str = "Not Started"
+    net_meter_application_number: Optional[str] = None
+    discom_name: Optional[str] = None
+    net_meter_notes: Optional[str] = None
+
+    # Stage 4: Inspection
+    inspection_status: str = "Not Started"
+    inspector_name: Optional[str] = None
+    inspection_date: Optional[datetime] = None
+    inspection_notes: Optional[str] = None
+
+    # Stage 5: Subsidy
+    subsidy_status: str = "Not Started"
+    subsidy_application_number: Optional[str] = None
+    subsidy_amount: Optional[float] = None
+    subsidy_notes: Optional[str] = None
+
+    overall_progress_pct: int = 0
+    documents: List[LoanDocumentResponse] = []
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class LoanProcessUpdate(BaseModel):
+    loan_status: Optional[str] = None
+    loan_bank_name: Optional[str] = None
+    loan_amount: Optional[float] = None
+    loan_notes: Optional[str] = None
+
+    installation_status: Optional[str] = None
+    installer_name: Optional[str] = None
+    installation_date: Optional[datetime] = None
+    installation_notes: Optional[str] = None
+
+    net_meter_status: Optional[str] = None
+    net_meter_application_number: Optional[str] = None
+    discom_name: Optional[str] = None
+    net_meter_notes: Optional[str] = None
+
+    inspection_status: Optional[str] = None
+    inspector_name: Optional[str] = None
+    inspection_date: Optional[datetime] = None
+    inspection_notes: Optional[str] = None
+
+    subsidy_status: Optional[str] = None
+    subsidy_application_number: Optional[str] = None
+    subsidy_amount: Optional[float] = None
+    subsidy_notes: Optional[str] = None
+
 class LeadResponse(LeadBase):
     id: int
     company_id: int
@@ -165,6 +279,7 @@ class LeadResponse(LeadBase):
     assigned_to_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    loan_process: Optional[LoanProcessSummary] = None
 
     class Config:
         from_attributes = True

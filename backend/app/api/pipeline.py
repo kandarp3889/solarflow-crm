@@ -11,6 +11,7 @@ from app.schemas.schemas import LeadResponse
 from app.api.deps import get_current_user, get_current_company
 from app.services.automation_engine import process_automation_event
 from app.services.notification_service import notify_stage_changed
+from app.services.loan_service import ensure_loan_process_for_lead, build_loan_process_summary
 
 router = APIRouter(prefix="/pipeline", tags=["Pipeline"])
 
@@ -378,6 +379,11 @@ def move_pipeline_card(
     db.add(act)
     db.commit()
 
+    # Automatically initialize Loan Process if moved to Deal Won
+    is_won_stage = req.new_stage == "won" or (target_stage and target_stage.is_won)
+    if is_won_stage:
+        ensure_loan_process_for_lead(db, company.id, lead, current_user.id)
+
     # Trigger automation
     process_automation_event("stage_changed", lead, db, company.id)
 
@@ -395,4 +401,5 @@ def move_pipeline_card(
     res = LeadResponse.from_orm(lead)
     if lead.assigned_to:
         res.assigned_to_name = lead.assigned_to.full_name
+    res.loan_process = build_loan_process_summary(lead.loan_process)
     return res

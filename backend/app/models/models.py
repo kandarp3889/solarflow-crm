@@ -63,6 +63,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     "company_admin": [
         "leads:view", "leads:create", "leads:edit", "leads:delete", "leads:export", "leads:assign",
         "pipeline:view", "pipeline:move", "pipeline:close_deals", "pipeline:manage_stages",
+        "loans:view", "loans:manage", "loans:upload_docs", "loans:delete_docs",
         "surveys:view", "surveys:create", "surveys:complete", "surveys:delete",
         "quotations:view", "quotations:create", "quotations:discount", "quotations:delete",
         "followups:view", "followups:manage",
@@ -75,6 +76,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     "sales_manager": [
         "leads:view", "leads:create", "leads:edit", "leads:export", "leads:assign",
         "pipeline:view", "pipeline:move", "pipeline:close_deals", "pipeline:manage_stages",
+        "loans:view", "loans:manage", "loans:upload_docs",
         "surveys:view", "surveys:create",
         "quotations:view", "quotations:create", "quotations:discount",
         "followups:view", "followups:manage",
@@ -86,12 +88,14 @@ DEFAULT_ROLE_PERMISSIONS = {
     "sales_rep": [
         "leads:view", "leads:create", "leads:edit",
         "pipeline:view", "pipeline:move",
+        "loans:view", "loans:manage", "loans:upload_docs",
         "quotations:view", "quotations:create",
         "followups:view", "followups:manage",
         "ai:use"
     ],
     "survey_engineer": [
         "surveys:view", "surveys:complete",
+        "loans:view",
         "followups:view", "followups:manage"
     ]
 }
@@ -146,6 +150,7 @@ class Company(Base):
     quotations = relationship("Quotation", back_populates="company", cascade="all, delete-orphan")
     surveys = relationship("Survey", back_populates="company", cascade="all, delete-orphan")
     pipeline_stages = relationship("PipelineStage", back_populates="company", cascade="all, delete-orphan", order_by="PipelineStage.order_index")
+    loan_processes = relationship("LoanProcess", back_populates="company", cascade="all, delete-orphan")
 
 # -------------------------------------------------------------
 # User (Multi-Tenant)
@@ -210,6 +215,7 @@ class Lead(Base):
     followups = relationship("FollowUp", back_populates="lead", cascade="all, delete-orphan")
     surveys = relationship("Survey", back_populates="lead", cascade="all, delete-orphan")
     quotations = relationship("Quotation", back_populates="lead", cascade="all, delete-orphan")
+    loan_process = relationship("LoanProcess", back_populates="lead", uselist=False, cascade="all, delete-orphan")
 
 # -------------------------------------------------------------
 # Lead Activity Timeline & Notes
@@ -431,3 +437,77 @@ class AuditLog(Base):
     ip_address = Column(String(50), nullable=True)
     details = Column(JSON, default={})
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+# -------------------------------------------------------------
+# Loan & Project Execution Workflow (For Won Deals)
+# -------------------------------------------------------------
+class LoanProcess(Base):
+    __tablename__ = "loan_processes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    lead_id = Column(Integer, ForeignKey("leads.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    loan_process_number = Column(String(50), nullable=True) # e.g. LP-2026-0001
+
+    # Stage 1: Loan Application & Sanction
+    loan_status = Column(String(50), default="Not Started", index=True) # Not Started, Pending Documents, Submitted, Under Review, Approved, Rejected, Disbursed
+    loan_bank_name = Column(String(100), nullable=True)
+    loan_amount = Column(Float, nullable=True)
+    loan_notes = Column(Text, nullable=True)
+
+    # Stage 2: Installation
+    installation_status = Column(String(50), default="Not Started", index=True) # Not Started, In Progress, Material Delivered, Structure Erected, Panels Installed, Wiring Completed, Completed
+    installer_name = Column(String(100), nullable=True)
+    installation_date = Column(DateTime, nullable=True)
+    installation_notes = Column(Text, nullable=True)
+
+    # Stage 3: Net Metering
+    net_meter_status = Column(String(50), default="Not Started", index=True) # Not Started, Applied, Inspection Pending, Meter Issued, Meter Installed, Completed, Rejected
+    net_meter_application_number = Column(String(100), nullable=True)
+    discom_name = Column(String(100), nullable=True)
+    net_meter_notes = Column(Text, nullable=True)
+
+    # Stage 4: Inspection & Approvals
+    inspection_status = Column(String(50), default="Not Started", index=True) # Not Started, Scheduled, Pending Review, Passed, Failed, Completed
+    inspector_name = Column(String(100), nullable=True)
+    inspection_date = Column(DateTime, nullable=True)
+    inspection_notes = Column(Text, nullable=True)
+
+    # Stage 5: Subsidy Claim & Disbursal
+    subsidy_status = Column(String(50), default="Not Started", index=True) # Not Started, Application Submitted, Document Verification, Inspection Approved, Disbursed, Rejected, Completed
+    subsidy_application_number = Column(String(100), nullable=True)
+    subsidy_amount = Column(Float, nullable=True)
+    subsidy_notes = Column(Text, nullable=True)
+
+    overall_progress_pct = Column(Integer, default=0) # 0 to 100
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    lead = relationship("Lead", back_populates="loan_process")
+    company = relationship("Company", back_populates="loan_processes")
+    documents = relationship("LoanDocument", back_populates="loan_process", cascade="all, delete-orphan", order_by="desc(LoanDocument.created_at)")
+
+
+class LoanDocument(Base):
+    __tablename__ = "loan_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    loan_process_id = Column(Integer, ForeignKey("loan_processes.id", ondelete="CASCADE"), nullable=False, index=True)
+    lead_id = Column(Integer, ForeignKey("leads.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    # Categorization: 'loan_file' | 'installation' | 'net_meter_file' | 'inspection' | 'subsidy'
+    stage_category = Column(String(50), nullable=False, index=True)
+    
+    file_name = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_size = Column(Integer, nullable=False, default=0)
+    mime_type = Column(String(100), nullable=True)
+    uploaded_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    notes = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    loan_process = relationship("LoanProcess", back_populates="documents")
+    uploaded_by = relationship("User")
+

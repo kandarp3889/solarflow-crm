@@ -156,6 +156,107 @@ export interface LeadNote {
   created_at: string;
 }
 
+export interface LoanDocument {
+  id: number;
+  company_id: number;
+  loan_process_id: number;
+  lead_id: number;
+  stage_category: 'loan_file' | 'installation' | 'net_meter_file' | 'inspection' | 'subsidy' | string;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  mime_type?: string;
+  uploaded_by_id?: number;
+  uploaded_by_name?: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface LoanProcessSummary {
+  id: number;
+  loan_process_number?: string;
+  loan_status: string;
+  installation_status: string;
+  net_meter_status: string;
+  inspection_status: string;
+  subsidy_status: string;
+  overall_progress_pct: number;
+  loan_files_count: number;
+  installation_docs_count: number;
+  net_meter_files_count: number;
+  inspection_docs_count: number;
+  subsidy_docs_count: number;
+}
+
+export interface LoanProcess {
+  id: number;
+  company_id: number;
+  lead_id: number;
+  lead_name?: string;
+  lead_code?: string;
+  lead_phone?: string;
+  system_size_kw?: number;
+  monthly_bill?: number;
+  loan_process_number?: string;
+
+  loan_status: string;
+  loan_bank_name?: string;
+  loan_amount?: number;
+  loan_notes?: string;
+
+  installation_status: string;
+  installer_name?: string;
+  installation_date?: string;
+  installation_notes?: string;
+
+  net_meter_status: string;
+  net_meter_application_number?: string;
+  discom_name?: string;
+  net_meter_notes?: string;
+
+  inspection_status: string;
+  inspector_name?: string;
+  inspection_date?: string;
+  inspection_notes?: string;
+
+  subsidy_status: string;
+  subsidy_application_number?: string;
+  subsidy_amount?: number;
+  subsidy_notes?: string;
+
+  overall_progress_pct: number;
+  documents: LoanDocument[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LoanProcessUpdatePayload {
+  loan_status?: string;
+  loan_bank_name?: string;
+  loan_amount?: number;
+  loan_notes?: string;
+
+  installation_status?: string;
+  installer_name?: string;
+  installation_date?: string;
+  installation_notes?: string;
+
+  net_meter_status?: string;
+  net_meter_application_number?: string;
+  discom_name?: string;
+  net_meter_notes?: string;
+
+  inspection_status?: string;
+  inspector_name?: string;
+  inspection_date?: string;
+  inspection_notes?: string;
+
+  subsidy_status?: string;
+  subsidy_application_number?: string;
+  subsidy_amount?: number;
+  subsidy_notes?: string;
+}
+
 export interface Lead {
   id: number;
   company_id: number;
@@ -184,6 +285,7 @@ export interface Lead {
 
   activities?: LeadActivity[];
   notes?: LeadNote[];
+  loan_process?: LoanProcessSummary;
 }
 
 export type FollowUpType = 'call' | 'whatsapp' | 'email' | 'site_visit' | 'meeting';

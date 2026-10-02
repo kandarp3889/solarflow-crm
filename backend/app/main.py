@@ -25,6 +25,7 @@ from app.api.ai import router as ai_router
 from app.api.settings import router as settings_router
 from app.api.notifications import router as notifications_router
 from app.api.audit_logs import router as audit_logs_router
+from app.api.loan_process import router as loan_process_router
 
 # Create database tables automatically
 Base.metadata.create_all(bind=engine)
@@ -119,8 +120,40 @@ def ensure_default_pipeline_stages():
     except Exception as e:
         print(f"[!] Pipeline stages initialization notice: {e}")
 
+def ensure_existing_won_leads_have_loan_processes():
+    try:
+        from app.database import SessionLocal
+        from app.models.models import Lead, LoanProcess
+        db = SessionLocal()
+        won_leads = db.query(Lead).filter(Lead.stage == "won").all()
+        created_count = 0
+        for lead in won_leads:
+            existing = db.query(LoanProcess).filter(LoanProcess.lead_id == lead.id).first()
+            if not existing:
+                code = f"LP-{lead.lead_id}"
+                new_lp = LoanProcess(
+                    company_id=lead.company_id,
+                    lead_id=lead.id,
+                    loan_process_number=code,
+                    loan_status="Not Started",
+                    installation_status="Not Started",
+                    net_meter_status="Not Started",
+                    inspection_status="Not Started",
+                    subsidy_status="Not Started",
+                    overall_progress_pct=0
+                )
+                db.add(new_lp)
+                created_count += 1
+        if created_count > 0:
+            db.commit()
+            print(f"[*] Initialized loan process records for {created_count} won deal(s).")
+        db.close()
+    except Exception as e:
+        print(f"[!] Won leads loan initialization notice: {e}")
+
 auto_seed_if_empty()
 ensure_default_pipeline_stages()
+ensure_existing_won_leads_have_loan_processes()
 
 app = FastAPI(
     title="SolarFlow CRM SaaS API",
@@ -175,6 +208,7 @@ app.include_router(ai_router, prefix=settings.API_V1_STR)
 app.include_router(settings_router, prefix=settings.API_V1_STR)
 app.include_router(notifications_router, prefix=settings.API_V1_STR)
 app.include_router(audit_logs_router, prefix=settings.API_V1_STR)
+app.include_router(loan_process_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():

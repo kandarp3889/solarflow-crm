@@ -530,6 +530,37 @@ class ApiClient {
   async getAuditLogs() {
     return this.request('/audit-logs');
   }
+
+  // Loan Process & Installation Workflow
+  async getLoanProcess(leadId: number) {
+    return this.request(`/leads/${leadId}/loan-process`);
+  }
+
+  async updateLoanProcess(leadId: number, data: any) {
+    return this.request(`/leads/${leadId}/loan-process`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async uploadLoanDocument(leadId: number, file: File, stageCategory: string, notes?: string) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('stage_category', stageCategory);
+    if (notes) {
+      formData.append('notes', notes);
+    }
+    return this.request(`/leads/${leadId}/loan-process/documents`, {
+      method: 'POST',
+      body: formData
+    });
+  }
+
+  async deleteLoanDocument(leadId: number, documentId: number) {
+    return this.request(`/leads/${leadId}/loan-process/documents/${documentId}`, {
+      method: 'DELETE'
+    });
+  }
 }
 
 export const api = new ApiClient();

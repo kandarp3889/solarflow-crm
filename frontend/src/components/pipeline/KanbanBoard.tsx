@@ -16,11 +16,13 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
-  RefreshCw
+  RefreshCw,
+  FileText
 } from 'lucide-react';
 import { Lead, PipelineStageConfig } from '../../types';
 import { api } from '../../services/api';
 import { PipelineStagesModal, getStageColorConfig } from './PipelineStagesModal';
+import { LoanProcessModal } from '../loans/LoanProcessModal';
 
 interface KanbanBoardProps {
   onSelectLead: (id: number) => void;
@@ -38,6 +40,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [draggedLeadId, setDraggedLeadId] = useState<number | null>(null);
   const [dragOverStageKey, setDragOverStageKey] = useState<string | null>(null);
   const [isStageModalOpen, setIsStageModalOpen] = useState(false);
+  const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
+  const [selectedLoanLeadId, setSelectedLoanLeadId] = useState<number | null>(null);
 
   const fetchStages = async () => {
     setLoading(true);
@@ -257,6 +261,27 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           </span>
                         </div>
 
+                        {/* Loan Process Badge for Won Deals */}
+                        {lead.stage === 'won' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLoanLeadId(lead.id);
+                              setIsLoanModalOpen(true);
+                            }}
+                            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-[10px] text-emerald-300 font-semibold transition-colors cursor-pointer group/loan"
+                            title="Open Solar Loan & Execution Workflow"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <FileText className="w-3 h-3 text-emerald-400 group-hover/loan:scale-110 transition-transform" />
+                              <span>Loan: {lead.loan_process?.loan_status || 'Active'}</span>
+                            </span>
+                            <span className="font-mono text-emerald-400 font-bold">
+                              {lead.loan_process?.overall_progress_pct || 0}%
+                            </span>
+                          </button>
+                        )}
+
                         {/* Bottom: Rep & Quick Advance Actions */}
                         <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
                           <span className="truncate max-w-[100px]" title={lead.assigned_to_name || 'Unassigned'}>
@@ -329,6 +354,22 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         }}
         currentStages={columnsData}
       />
+
+      {/* Loan Process Modal */}
+      {isLoanModalOpen && selectedLoanLeadId && (
+        <LoanProcessModal
+          isOpen={isLoanModalOpen}
+          leadId={selectedLoanLeadId}
+          onClose={() => {
+            setIsLoanModalOpen(false);
+            setSelectedLoanLeadId(null);
+          }}
+          onSuccess={() => {
+            fetchStages();
+            window.dispatchEvent(new CustomEvent('crm-data-updated'));
+          }}
+        />
+      )}
     </div>
   );
 };

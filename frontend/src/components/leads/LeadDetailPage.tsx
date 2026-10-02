@@ -14,11 +14,14 @@ import {
   Send,
   Sparkles,
   Edit,
-  Trash2
+  Trash2,
+  CheckCircle2,
+  ChevronRight
 } from 'lucide-react';
 import { Lead, LeadActivity, LeadNote } from '../../types';
 import { api } from '../../services/api';
 import { EditLeadModal } from './EditLeadModal';
+import { LoanProcessSection } from '../loans/LoanProcessSection';
 
 interface LeadDetailPageProps {
   leadId: number;
@@ -35,7 +38,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
 }) => {
   const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'timeline' | 'notes' | 'survey' | 'quotes'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'notes' | 'loans'>('timeline');
   const [newNote, setNewNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -206,6 +209,38 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
         </div>
       </div>
 
+      {/* Deal Won & Loan Process Execution Highlight Banner */}
+      {lead.stage === 'won' && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-slate-900 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-white text-sm">Deal Won — Solar Loan & Execution Active</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono">
+                  {lead.loan_process?.loan_process_number || 'LP-WORKFLOW'}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  {lead.loan_process?.overall_progress_pct || 0}% Complete
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1">
+                Loan: <strong className="text-amber-300">{lead.loan_process?.loan_status || 'Not Started'}</strong> • Installation: <strong className="text-blue-300">{lead.loan_process?.installation_status || 'Not Started'}</strong> • Net Meter: <strong className="text-cyan-300">{lead.loan_process?.net_meter_status || 'Not Started'}</strong> • Subsidy: <strong className="text-emerald-300">{lead.loan_process?.subsidy_status || 'Not Started'}</strong>
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveTab('loans')}
+            className="px-4 py-2.5 text-xs font-bold rounded-xl bg-amber-500 text-slate-950 hover:bg-amber-400 transition-colors shadow-md flex items-center gap-2 self-start sm:self-auto cursor-pointer flex-shrink-0"
+          >
+            <span>Open Loan Workflow</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Grid Section: Customer Info + Solar Requirements + Sales Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Card 1: Customer Contact Info */}
@@ -337,6 +372,21 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
           >
             Sales Notes ({lead.notes?.length || 0})
           </button>
+          {lead.stage === 'won' && (
+            <button
+              onClick={() => setActiveTab('loans')}
+              className={`text-xs font-bold pb-1 transition-colors border-b-2 flex items-center gap-1.5 ${
+                activeTab === 'loans'
+                  ? 'border-amber-500 text-amber-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <span>Loan & Project Execution</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-400 font-mono">
+                {lead.loan_process?.overall_progress_pct || 0}%
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Tab 1: Activity Timeline */}
@@ -429,6 +479,13 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                 ))
               )}
             </div>
+          </div>
+        )}
+
+        {/* Tab 3: Loan & Execution Workflow */}
+        {activeTab === 'loans' && (
+          <div className="mt-6">
+            <LoanProcessSection leadId={lead.id} onRefresh={fetchLead} />
           </div>
         )}
       </div>

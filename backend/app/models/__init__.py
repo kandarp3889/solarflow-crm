@@ -20,10 +20,14 @@ from app.models.models import (
     SurveyStatus,
     QuotationStatus,
     PipelineStage,
-    DEFAULT_ROLE_PERMISSIONS
+    DEFAULT_ROLE_PERMISSIONS,
+    LoanProcess,
+    LoanDocument
 )
 
 __all__ = [
+    "LoanProcess",
+    "LoanDocument",
     "DEFAULT_ROLE_PERMISSIONS",
     "Base",
     "Company",

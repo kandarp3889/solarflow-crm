@@ -8,10 +8,10 @@ def calculate_solar_quotation(
     inverter_cost: float = 45000.0,
     battery_cost: float = 0.0,
     structure_cost: float = 20000.0,
-    installation_cost: float = 25000.0,
-    other_costs: float = 5000.0,
-    discount: float = 5000.0,
-    gst_rate: float = 13.8,
+    installation_cost: float = 0.0,
+    other_costs: float = 0.0,
+    discount: float = 0.0,
+    gst_rate: float = 0.0,
     apply_subsidy: bool = True
 ) -> Dict[str, Any]:
     """
@@ -20,12 +20,11 @@ def calculate_solar_quotation(
     2. Panel Total Cost = kW * 1000 * Panel Cost per Watt
     3. Hardware Base = Panels Cost + Inverter + Battery + Structure
     4. Subtotal = Hardware Base + Installation + Other - Discount
-    5. GST Amount = Subtotal * (GST Rate / 100)
-    6. Subsidy (e.g. PM Surya Ghar Central Subsidy rules):
+    5. Subsidy (e.g. PM Surya Ghar Central Subsidy rules):
        - 1 kW: ₹30,000
        - 2 kW: ₹60,000
        - >= 3 kW: ₹78,000
-    7. Final Customer Price = Subtotal + GST Amount - Subsidy
+    6. Final Customer Price = Subtotal - Subsidy
     """
     kw = max(0.1, float(system_size_kw))
     wattage = max(300, int(panel_wattage))
@@ -35,7 +34,7 @@ def calculate_solar_quotation(
     system_hardware_price = round(panel_total_cost + inverter_cost + battery_cost + structure_cost, 2)
     
     subtotal = round(system_hardware_price + installation_cost + other_costs - discount, 2)
-    gst_amount = round(subtotal * (gst_rate / 100.0), 2)
+    gst_amount = 0.0
 
     subsidy_amount = 0.0
     if apply_subsidy:
@@ -48,7 +47,7 @@ def calculate_solar_quotation(
         else:
             subsidy_amount = kw * 30000.0
 
-    final_price = round(max(0.0, subtotal + gst_amount - subsidy_amount), 2)
+    final_price = round(max(0.0, subtotal - subsidy_amount), 2)
 
     # Solar ROI Estimations
     monthly_generation_kwh = round(kw * 120.0, 1) # Approx 4 units/kW/day * 30 days

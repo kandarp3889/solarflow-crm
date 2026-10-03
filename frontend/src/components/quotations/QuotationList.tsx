@@ -175,7 +175,7 @@ export const QuotationList: React.FC<QuotationListProps> = ({
             <span>Solar Quotation Engine & Proposals</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Automated pricing formula with Tier-1 solar panels, inverters, GST, and PM Surya Ghar central subsidies.
+            Automated pricing formula with Tier-1 solar panels, inverters, and PM Surya Ghar central subsidies.
           </p>
         </div>
 
@@ -283,7 +283,7 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                   <div className="pt-2 border-t border-slate-700 flex justify-between items-center">
                     <span className="font-bold text-white">Final Customer Price:</span>
                     <span className="text-base font-bold text-emerald-400 font-display">
-                      ₹{q.final_price.toLocaleString()}
+                      ₹{Math.max(0, Math.round(q.system_price - (q.subsidy_amount || 0))).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -353,6 +353,7 @@ export const QuotationList: React.FC<QuotationListProps> = ({
         const inverterSpec = activeQuote.inverter_name || linkedSystem?.inverter_name || `${activeQuote.inverter_brand} (${activeQuote.inverter_capacity})`;
         const structureSpec = activeQuote.structure_name || linkedSystem?.structure_name || activeQuote.structure_type;
         const bosSpec = activeQuote.bos_name || linkedSystem?.bos_name || "Standard BOS Kit (DCDB/ACDB, DC Cables, Earthing)";
+        const finalPayablePrice = Math.max(0, Math.round(activeQuote.system_price - (activeQuote.subsidy_amount || 0)));
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
@@ -491,12 +492,6 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                   <span>Total System Hardware (PV + Inverter + Structure):</span>
                   <span className="font-semibold text-slate-900">₹{activeQuote.system_price.toLocaleString()}</span>
                 </div>
-                {activeQuote.gst_amount > 0 && (
-                  <div className="flex justify-between text-slate-600">
-                    <span>Applicable GST ({activeQuote.gst_rate || 13.8}%):</span>
-                    <span className="font-semibold text-slate-900">₹{activeQuote.gst_amount.toLocaleString()}</span>
-                  </div>
-                )}
                 <div className="flex justify-between text-emerald-800 font-bold bg-emerald-50 p-2.5 rounded-lg border border-emerald-300">
                   <span>PM Surya Ghar Muft Bijli Yojana Central Subsidy:</span>
                   <span>- ₹{activeQuote.subsidy_amount.toLocaleString()} (Direct Bank Transfer)</span>
@@ -504,7 +499,7 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                 <div className="pt-3 border-t flex justify-between items-center text-slate-950 font-display">
                   <span className="text-sm font-bold">Net Final Customer Payable:</span>
                   <span className="text-2xl font-black text-[#106828]">
-                    ₹{activeQuote.final_price.toLocaleString()}
+                    ₹{finalPayablePrice.toLocaleString()}
                   </span>
                 </div>
               </div>

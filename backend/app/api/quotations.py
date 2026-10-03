@@ -114,10 +114,10 @@ def create_quotation(
         inst_cost = quote_in.installation_cost if quote_in.installation_cost is not None else 0.0
         other_c = quote_in.other_costs if quote_in.other_costs is not None else 0.0
         disc_c = quote_in.discount if quote_in.discount is not None else 0.0
-        gst_r = quote_in.gst_rate if quote_in.gst_rate is not None else 0.0
+        gst_r = 0.0
 
         subtotal = round(base_price_to_use + inst_cost + other_c - disc_c, 2)
-        gst_amt = round(subtotal * (gst_r / 100.0), 2)
+        gst_amt = 0.0
 
         if subsidy_to_use is not None:
             subsidy_val = round(float(subsidy_to_use), 2)
@@ -131,7 +131,7 @@ def create_quotation(
             else:
                 subsidy_val = round(kw * 30000.0, 2)
 
-        final_price_val = round(max(0.0, subtotal + gst_amt - subsidy_val), 2)
+        final_price_val = round(max(0.0, subtotal - subsidy_val), 2)
         gen_kwh = round(kw * 120.0, 1)
         savings = round(gen_kwh * 8.0, 2)
         annual_sav = savings * 12.0
@@ -144,8 +144,8 @@ def create_quotation(
             "other_costs": other_c,
             "discount": disc_c,
             "subtotal": subtotal,
-            "gst_rate": gst_r,
-            "gst_amount": gst_amt,
+            "gst_rate": 0.0,
+            "gst_amount": 0.0,
             "subsidy_amount": subsidy_val,
             "final_price": final_price_val,
             "monthly_generation_kwh": gen_kwh,
@@ -161,10 +161,10 @@ def create_quotation(
             inverter_cost=45000.0,
             battery_cost=60000.0 if quote_in.battery_backup != "None" else 0.0,
             structure_cost=20000.0,
-            installation_cost=quote_in.installation_cost or 25000.0,
-            other_costs=quote_in.other_costs or 5000.0,
-            discount=quote_in.discount or 5000.0,
-            gst_rate=quote_in.gst_rate or 13.8,
+            installation_cost=0.0,
+            other_costs=0.0,
+            discount=0.0,
+            gst_rate=0.0,
             apply_subsidy=True
         )
 

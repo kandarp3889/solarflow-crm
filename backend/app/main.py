@@ -104,7 +104,20 @@ def ensure_schema_compatibility():
                         except Exception as drop_err:
                             print(f"[!] Could not drop column {col} from leads: {drop_err}")
 
+                # Ensure quotations have GST removed and final price updated
+                try:
+                    conn.execute(text("UPDATE quotations SET gst_rate = 0.0, gst_amount = 0.0, final_price = CASE WHEN (system_price - subsidy_amount) > 0 THEN (system_price - subsidy_amount) ELSE 0 END WHERE gst_amount > 0 OR gst_rate > 0;"))
+                except Exception as gst_err:
+                    pass
+
                 conn.commit()
+            
+            # Reset legacy GST on existing quotations for all engines
+            try:
+                conn.execute(text("UPDATE quotations SET gst_rate = 0.0, gst_amount = 0.0, final_price = CASE WHEN (system_price - subsidy_amount) > 0 THEN (system_price - subsidy_amount) ELSE 0 END WHERE gst_amount > 0 OR gst_rate > 0;"))
+                conn.commit()
+            except Exception as e:
+                pass
     except Exception as e:
         print(f"[!] Schema compatibility notice: {e}")
 

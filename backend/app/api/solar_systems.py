@@ -153,6 +153,8 @@ def update_solar_system(
 
     update_data = system_update.dict(exclude_unset=True)
 
+    old_system_name = system.system_name
+
     if "system_name" in update_data:
         name = (update_data["system_name"] or "").strip()
         if not name:
@@ -201,6 +203,31 @@ def update_solar_system(
         system.is_active = bool(update_data["is_active"])
 
     system.updated_at = now_ist()
+
+    # Synchronize updated hardware specifications and warranty terms to matching quotations
+    matching_quotes = db.query(Quotation).filter(
+        Quotation.company_id == company.id,
+        or_(
+            Quotation.system_id == system.id,
+            Quotation.system_name == old_system_name,
+            Quotation.system_name == system.system_name
+        )
+    ).all()
+    for q in matching_quotes:
+        if q.system_id is None:
+            q.system_id = system.id
+        if "system_name" in update_data and system.system_name:
+            q.system_name = system.system_name
+        if "warranty" in update_data and system.warranty:
+            q.warranty = system.warranty
+        if "solar_panel_name" in update_data and system.solar_panel_name:
+            q.solar_panel_name = system.solar_panel_name
+        if "inverter_name" in update_data and system.inverter_name:
+            q.inverter_name = system.inverter_name
+        if "structure_name" in update_data and system.structure_name:
+            q.structure_name = system.structure_name
+        if "bos_name" in update_data and system.bos_name:
+            q.bos_name = system.bos_name
 
     db.commit()
     db.refresh(system)

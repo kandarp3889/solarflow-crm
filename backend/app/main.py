@@ -37,7 +37,7 @@ def ensure_schema_compatibility():
             if engine.dialect.name == "postgresql":
                 conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_permissions JSON DEFAULT '[]'::json;"))
                 conn.execute(text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS custom_roles JSON DEFAULT '[]'::json;"))
-
+                conn.execute(text("ALTER TABLE loan_processes ADD COLUMN IF NOT EXISTS inverter_serial_number VARCHAR(100);"))
 
                 cols_to_drop = [
                     "consumer_number", "roof_ownership", "roof_type", "lead_score", "score_category", "estimated_value",
@@ -60,6 +60,10 @@ def ensure_schema_compatibility():
                 comp_cols = [row[1] for row in comp_result]
                 if "custom_roles" not in comp_cols:
                     conn.execute(text("ALTER TABLE companies ADD COLUMN custom_roles JSON DEFAULT '[]'"))
+                lp_result = conn.execute(text("PRAGMA table_info(loan_processes)")).fetchall()
+                lp_cols = [row[1] for row in lp_result]
+                if "inverter_serial_number" not in lp_cols:
+                    conn.execute(text("ALTER TABLE loan_processes ADD COLUMN inverter_serial_number VARCHAR(100)"))
                 lead_result = conn.execute(text("PRAGMA table_info(leads)")).fetchall()
                 lead_cols = [row[1] for row in lead_result]
                 cols_to_drop = [

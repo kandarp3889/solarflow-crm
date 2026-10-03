@@ -161,7 +161,7 @@ export interface LoanDocument {
   company_id: number;
   loan_process_id: number;
   lead_id: number;
-  stage_category: 'loan_file' | 'installation' | 'net_meter_file' | 'inspection' | 'subsidy' | string;
+  stage_category: 'loan_file' | 'installation' | 'net_meter_file' | 'inspection' | 'subsidy' | 'installed_photo' | 'dcr_report' | string;
   file_name: string;
   file_path: string;
   file_size: number;
@@ -169,6 +169,15 @@ export interface LoanDocument {
   uploaded_by_id?: number;
   uploaded_by_name?: string;
   notes?: string;
+  created_at: string;
+}
+
+export interface LoanPanelSerial {
+  id: number;
+  loan_process_id: number;
+  lead_id: number;
+  serial_number: string;
+  order_index: number;
   created_at: string;
 }
 
@@ -186,6 +195,9 @@ export interface LoanProcessSummary {
   net_meter_files_count: number;
   inspection_docs_count: number;
   subsidy_docs_count: number;
+  installed_photos_count?: number;
+  dcr_reports_count?: number;
+  panel_serials_count?: number;
 }
 
 export interface LoanProcess {
@@ -208,6 +220,11 @@ export interface LoanProcess {
   installer_name?: string;
   installation_date?: string;
   installation_notes?: string;
+
+  // Equipment & Installation Details
+  inverter_serial_number?: string;
+  panel_serial_numbers?: string[];
+  panel_serials?: LoanPanelSerial[];
 
   net_meter_status: string;
   net_meter_application_number?: string;
@@ -240,6 +257,10 @@ export interface LoanProcessUpdatePayload {
   installer_name?: string;
   installation_date?: string;
   installation_notes?: string;
+
+  // Equipment & Installation Details
+  inverter_serial_number?: string;
+  panel_serial_numbers?: string[];
 
   net_meter_status?: string;
   net_meter_application_number?: string;

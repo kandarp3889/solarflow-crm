@@ -19,7 +19,14 @@ import {
   Paperclip,
   Calendar,
   AlertTriangle,
-  Download
+  Download,
+  Plus,
+  Image as ImageIcon,
+  Eye,
+  X,
+  Cpu,
+  RefreshCw,
+  Maximize2
 } from 'lucide-react';
 import { api, getFileUrl } from '../../services/api';
 import { LoanProcess, LoanDocument, LoanProcessUpdatePayload } from '../../types';
@@ -120,6 +127,15 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
   const [installationDate, setInstallationDate] = useState('');
   const [installationNotes, setInstallationNotes] = useState('');
 
+  // 3. Installation Details (Equipment & Evidence)
+  const [inverterSerialNumber, setInverterSerialNumber] = useState('');
+  const [panelSerialNumbers, setPanelSerialNumbers] = useState<string[]>(['']);
+  const [previewPhoto, setPreviewPhoto] = useState<{ url: string; name: string } | null>(null);
+  const [replacingDcrDocId, setReplacingDcrDocId] = useState<number | null>(null);
+  const dcrFileInputRef = useRef<HTMLInputElement | null>(null);
+  const replaceDcrFileInputRef = useRef<HTMLInputElement | null>(null);
+  const photosFileInputRef = useRef<HTMLInputElement | null>(null);
+
   const [netMeterStatus, setNetMeterStatus] = useState('Not Started');
   const [netMeterAppNum, setNetMeterAppNum] = useState('');
   const [discomName, setDiscomName] = useState('');
@@ -147,6 +163,10 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
     installation_date: installationDate ? new Date(installationDate).toISOString() : undefined,
     installation_notes: installationNotes.trim() || undefined,
 
+    // Equipment Details
+    inverter_serial_number: inverterSerialNumber.trim() || undefined,
+    panel_serial_numbers: panelSerialNumbers.map((s) => s.trim()).filter(Boolean),
+
     net_meter_status: netMeterStatus,
     net_meter_application_number: netMeterAppNum.trim() || undefined,
     discom_name: discomName.trim() || undefined,
@@ -162,6 +182,133 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
     subsidy_amount: subsidyAmount ? parseFloat(subsidyAmount) : undefined,
     subsidy_notes: subsidyNotes.trim() || undefined
   });
+
+  // Panel Serial Numbers Handlers
+  const handleAddPanelSerial = () => {
+    setPanelSerialNumbers((prev) => [...prev, '']);
+  };
+
+  const handleRemovePanelSerial = (index: number) => {
+    setPanelSerialNumbers((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      return next.length > 0 ? next : [''];
+    });
+  };
+
+  const handlePanelSerialChange = (index: number, value: string) => {
+    setPanelSerialNumbers((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  };
+
+  // Dedicated Installed Photos Upload (Multiple)
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const fileList = Array.from(files);
+    e.target.value = '';
+
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    for (const f of fileList) {
+      if (f.size > 15 * 1024 * 1024) {
+        setErrorMsg(`Photo "${f.name}" exceeds the 15 MB limit. Please upload a smaller image.`);
+        return;
+      }
+      const hasValidExt = validExtensions.some((ext) => f.name.toLowerCase().endsWith(ext));
+      if (!hasValidExt) {
+        setErrorMsg(`File "${f.name}" has invalid format. Please upload JPG, JPEG, PNG, or WEBP images.`);
+        return;
+      }
+    }
+
+    setUploadingCategory('installed_photo');
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      // 1. Sync and persist current form data
+      const currentPayload = getCurrentFormPayload();
+      await api.updateLoanProcess(leadId, currentPayload);
+
+      // 2. Upload photos sequentially
+      for (const f of fileList) {
+        await api.uploadLoanDocument(leadId, f, 'installed_photo');
+      }
+
+      // 3. Fetch latest loan process metadata without touching user's form inputs
+      const latestData: LoanProcess = await api.getLoanProcess(leadId);
+      setLoanProcess(latestData);
+
+      setSuccessMsg(
+        fileList.length === 1
+          ? `Installed photo "${fileList[0].name}" uploaded successfully!`
+          : `${fileList.length} installed photos uploaded successfully!`
+      );
+      setTimeout(() => setSuccessMsg(null), 4000);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error uploading installed photos');
+    } finally {
+      setUploadingCategory(null);
+    }
+  };
+
+  // Dedicated DCR Report Upload & Replace
+  const handleDcrUpload = async (e: React.ChangeEvent<HTMLInputElement>, oldDocIdToReplace?: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    if (file.size > 15 * 1024 * 1024) {
+      setErrorMsg('DCR Report exceeds the 15 MB limit. Please upload a smaller PDF document.');
+      return;
+    }
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setErrorMsg('Invalid format. DCR Report must be a PDF document.');
+      return;
+    }
+
+    setUploadingCategory('dcr_report');
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      // 1. Sync current form data first
+      const currentPayload = getCurrentFormPayload();
+      await api.updateLoanProcess(leadId, currentPayload);
+
+      // 2. If replacing old report, delete previous document
+      if (oldDocIdToReplace) {
+        try {
+          await api.deleteLoanDocument(leadId, oldDocIdToReplace);
+        } catch (delErr) {
+          console.warn('Could not delete old DCR doc during replace:', delErr);
+        }
+      }
+
+      // 3. Upload new DCR document
+      await api.uploadLoanDocument(leadId, file, 'dcr_report');
+
+      // 4. Update documents & progress
+      const latestData: LoanProcess = await api.getLoanProcess(leadId);
+      setLoanProcess(latestData);
+
+      setSuccessMsg(
+        oldDocIdToReplace
+          ? `DCR Report replaced with "${file.name}" successfully!`
+          : `DCR Report "${file.name}" uploaded successfully!`
+      );
+      setTimeout(() => setSuccessMsg(null), 4000);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error uploading DCR Report');
+    } finally {
+      setUploadingCategory(null);
+      setReplacingDcrDocId(null);
+    }
+  };
 
   // Fetch loan data: isInitial=true populates form fields; isInitial=false only updates metadata & documents without touching form inputs
   const fetchLoanData = async (isInitial = true) => {
@@ -183,6 +330,14 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
         setInstallerName(data.installer_name || '');
         setInstallationDate(data.installation_date ? data.installation_date.split('T')[0] : '');
         setInstallationNotes(data.installation_notes || '');
+
+        // 3. Installation Details
+        setInverterSerialNumber(data.inverter_serial_number || '');
+        setPanelSerialNumbers(
+          data.panel_serial_numbers && data.panel_serial_numbers.length > 0
+            ? data.panel_serial_numbers
+            : ['']
+        );
 
         setNetMeterStatus(data.net_meter_status || 'Not Started');
         setNetMeterAppNum(data.net_meter_application_number || '');
@@ -362,6 +517,10 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
 
   const loanDocs = getDocsForStage('loan_file');
   const installDocs = getDocsForStage('installation');
+  const installedPhotos = (loanProcess.documents || []).filter(
+    (d) => d.stage_category === 'installed_photo' || d.stage_category === 'installation_photo'
+  );
+  const dcrReports = getDocsForStage('dcr_report');
   const netMeterDocs = getDocsForStage('net_meter_file');
   const inspectionDocs = getDocsForStage('inspection');
   const subsidyDocs = getDocsForStage('subsidy');
@@ -700,7 +859,372 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
         </div>
 
         {/* ========================================================================= */}
-        {/* 3. NET METER FILE & STATUS */}
+        {/* 3. INSTALLATION DETAILS */}
+        {/* ========================================================================= */}
+        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-5 shadow-sm hover:border-slate-700 transition-colors lg:col-span-2">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <Cpu className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">3. Installation Details</h3>
+                <span className="text-[11px] text-slate-400">Solar equipment serial numbers, site evidence & DCR verification</span>
+              </div>
+            </div>
+
+            {/* Dynamic Status Indicator */}
+            <div className="flex items-center gap-2">
+              <span
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg border flex items-center gap-1.5 ${
+                  panelSerialNumbers.filter((s) => s.trim()).length > 0 &&
+                  inverterSerialNumber.trim() &&
+                  dcrReports.length > 0 &&
+                  installedPhotos.length > 0
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : panelSerialNumbers.filter((s) => s.trim()).length > 0 ||
+                      inverterSerialNumber.trim() ||
+                      installedPhotos.length > 0 ||
+                      dcrReports.length > 0
+                    ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                }`}
+              >
+                {panelSerialNumbers.filter((s) => s.trim()).length > 0 &&
+                inverterSerialNumber.trim() &&
+                dcrReports.length > 0 &&
+                installedPhotos.length > 0 ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Equipment & Evidence Complete</span>
+                  </>
+                ) : panelSerialNumbers.filter((s) => s.trim()).length > 0 ||
+                  inverterSerialNumber.trim() ||
+                  installedPhotos.length > 0 ||
+                  dcrReports.length > 0 ? (
+                  <>
+                    <Clock className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Details Logged ({panelSerialNumbers.filter((s) => s.trim()).length} Panels • {installedPhotos.length} Photos)</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Pending Equipment Details</span>
+                  </>
+                )}
+              </span>
+            </div>
+          </div>
+
+          {/* Subgrid: Left column for Equipment Serials, Right column for Documents & Photos */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* ----------------- LEFT: SERIAL NUMBERS ----------------- */}
+            <div className="space-y-4">
+              {/* Inverter Serial Number Field */}
+              <div>
+                <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+                  Inverter Serial Number
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. INV-GROWATT-2026-88129"
+                  value={inverterSerialNumber}
+                  onChange={(e) => setInverterSerialNumber(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 text-xs focus:outline-none focus:border-amber-500 font-mono tracking-wide"
+                />
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  Record the unique manufacturer serial printed on the grid-tie inverter unit.
+                </span>
+              </div>
+
+              {/* Panel Serial Numbers (Dynamic list) */}
+              <div className="p-3.5 rounded-xl bg-slate-850 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-200 block">
+                      Solar Panel Serial Numbers ({panelSerialNumbers.filter((s) => s.trim()).length})
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      Add individual serial barcode numbers for each installed PV module.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddPanelSerial}
+                    className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 cursor-pointer transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add Panel</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {panelSerialNumbers.map((serial, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="w-7 h-7 flex-shrink-0 rounded-md bg-slate-800 border border-slate-700 text-slate-400 text-[10px] font-mono font-bold flex items-center justify-center">
+                        #{idx + 1}
+                      </span>
+                      <input
+                        type="text"
+                        placeholder={`Panel #${idx + 1} serial (e.g. WAA-540W-2026-${String(idx + 1).padStart(3, '0')})`}
+                        value={serial}
+                        onChange={(e) => handlePanelSerialChange(idx, e.target.value)}
+                        className="flex-1 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 text-xs focus:outline-none focus:border-amber-500 font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePanelSerial(idx)}
+                        disabled={panelSerialNumbers.length === 1 && idx === 0 && !serial}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Remove Serial Field"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {panelSerialNumbers.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={handleAddPanelSerial}
+                    className="w-full py-1 text-center text-[11px] text-amber-400 hover:text-amber-300 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add another panel serial number</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ----------------- RIGHT: EVIDENCE & DCR REPORT ----------------- */}
+            <div className="space-y-4">
+              {/* DCR Report Upload */}
+              <div className="p-3.5 rounded-xl bg-slate-850 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                      <FileText className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-200 block">DCR Report (Domestic Content Requirement)</span>
+                      <span className="text-[10px] text-slate-400">PDF certificate verifying domestic solar cells & modules</span>
+                    </div>
+                  </div>
+
+                  {/* Upload button if no report uploaded */}
+                  {dcrReports.length === 0 && (
+                    <label className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 cursor-pointer transition-colors">
+                      <Upload className="w-3 h-3" />
+                      <span>{uploadingCategory === 'dcr_report' ? 'Uploading...' : 'Upload DCR Report'}</span>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        disabled={uploadingCategory === 'dcr_report'}
+                        onChange={(e) => handleDcrUpload(e)}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Hidden file input for replace action */}
+                <input
+                  type="file"
+                  ref={replaceDcrFileInputRef}
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={(e) => handleDcrUpload(e, replacingDcrDocId || undefined)}
+                />
+
+                {/* Display uploaded DCR Report(s) */}
+                {dcrReports.length === 0 ? (
+                  <p className="text-[11px] text-slate-500 italic py-1">
+                    No DCR report uploaded yet. Please upload the manufacturer compliance PDF certificate.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {dcrReports.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="p-2.5 rounded-lg bg-slate-800/80 border border-rose-500/20 flex items-center justify-between text-xs"
+                      >
+                        <div className="flex items-center gap-2.5 truncate max-w-[65%]">
+                          <FileText className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                          <div className="truncate">
+                            <a
+                              href={getFileUrl(doc.file_path)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-slate-200 font-medium hover:text-amber-400 truncate hover:underline block"
+                              title={doc.file_name}
+                            >
+                              {doc.file_name}
+                            </a>
+                            <div className="text-[10px] text-slate-400 flex items-center gap-2">
+                              <span>{Math.round(doc.file_size / 1024)} KB</span>
+                              <span>•</span>
+                              <span>{new Date(doc.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                DCR Verified
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <a
+                            href={getFileUrl(doc.file_path)}
+                            download={doc.file_name}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors"
+                            title="View / Download"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplacingDcrDocId(doc.id);
+                              replaceDcrFileInputRef.current?.click();
+                            }}
+                            disabled={uploadingCategory === 'dcr_report'}
+                            className="p-1.5 rounded-md text-slate-400 hover:text-amber-400 hover:bg-slate-700/50 transition-colors cursor-pointer"
+                            title="Replace Report"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteDocument(doc.id)}
+                            className="p-1.5 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                            title="Delete Report"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Installed Photos Upload Section */}
+              <div className="p-3.5 rounded-xl bg-slate-850 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                      <ImageIcon className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-200 block">
+                        Installed Photos ({installedPhotos.length})
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        Inverter mounting, panel arrays, earthing & DCDB photos
+                      </span>
+                    </div>
+                  </div>
+
+                  <label className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 cursor-pointer transition-colors">
+                    <Upload className="w-3 h-3" />
+                    <span>{uploadingCategory === 'installed_photo' ? 'Uploading...' : 'Upload Photos'}</span>
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      multiple
+                      className="hidden"
+                      disabled={uploadingCategory === 'installed_photo'}
+                      onChange={handlePhotoUpload}
+                    />
+                  </label>
+                </div>
+
+                {installedPhotos.length === 0 ? (
+                  <p className="text-[11px] text-slate-500 italic py-2">
+                    No installation photos uploaded yet. Upload multiple photos of the completed site installation (JPG, PNG, WebP).
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-64 overflow-y-auto pr-1">
+                    {installedPhotos.map((photo) => (
+                      <div
+                        key={photo.id}
+                        className="group relative rounded-xl overflow-hidden bg-slate-800 border border-slate-750 hover:border-amber-500/50 transition-all flex flex-col"
+                      >
+                        {/* Thumbnail */}
+                        <div
+                          className="h-24 w-full bg-slate-900 relative cursor-pointer overflow-hidden flex items-center justify-center"
+                          onClick={() => setPreviewPhoto({ url: getFileUrl(photo.file_path), name: photo.file_name })}
+                        >
+                          <img
+                            src={getFileUrl(photo.file_path)}
+                            alt={photo.file_name}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                          {/* Hover action overlay */}
+                          <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              className="p-1.5 rounded-lg bg-white/20 hover:bg-white/40 text-white backdrop-blur-sm transition-colors cursor-pointer"
+                              title="Preview"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewPhoto({ url: getFileUrl(photo.file_path), name: photo.file_name });
+                              }}
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            <a
+                              href={getFileUrl(photo.file_path)}
+                              download={photo.file_name}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1.5 rounded-lg bg-white/20 hover:bg-white/40 text-white backdrop-blur-sm transition-colors"
+                              title="Download"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteDocument(photo.id);
+                              }}
+                              className="p-1.5 rounded-lg bg-rose-500/30 hover:bg-rose-500/60 text-white backdrop-blur-sm transition-colors cursor-pointer"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Details */}
+                        <div className="p-2 text-[10px] space-y-0.5 bg-slate-800/90">
+                          <p className="text-slate-200 font-medium truncate" title={photo.file_name}>
+                            {photo.file_name}
+                          </p>
+                          <div className="flex items-center justify-between text-slate-500 font-mono text-[9px]">
+                            <span>{Math.round(photo.file_size / 1024)} KB</span>
+                            <span>{new Date(photo.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 4. NET METER FILE & STATUS */}
         {/* ========================================================================= */}
         <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-sm hover:border-slate-700 transition-colors">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -709,7 +1233,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                 <Gauge className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">3. Net Metering</h3>
+                <h3 className="text-sm font-bold text-white">4. Net Metering</h3>
                 <span className="text-[11px] text-slate-400">DISCOM application & bi-directional meter</span>
               </div>
             </div>
@@ -833,7 +1357,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
         </div>
 
         {/* ========================================================================= */}
-        {/* 4. TECHNICAL INSPECTION */}
+        {/* 5. TECHNICAL INSPECTION */}
         {/* ========================================================================= */}
         <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-sm hover:border-slate-700 transition-colors">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -842,7 +1366,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                 <ShieldCheck className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">4. Technical Inspection</h3>
+                <h3 className="text-sm font-bold text-white">5. Technical Inspection</h3>
                 <span className="text-[11px] text-slate-400">CEIG / Electrical inspector clearance</span>
               </div>
             </div>
@@ -965,7 +1489,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
         </div>
 
         {/* ========================================================================= */}
-        {/* 5. GOVERNMENT SUBSIDY */}
+        {/* 6. CENTRAL & STATE SUBSIDY TRACKING */}
         {/* ========================================================================= */}
         <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-sm hover:border-slate-700 transition-colors lg:col-span-2">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -974,7 +1498,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                 <Coins className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">5. Central & State Subsidy Tracking</h3>
+                <h3 className="text-sm font-bold text-white">6. Central & State Subsidy Tracking</h3>
                 <span className="text-[11px] text-slate-400">PM Surya Ghar National Portal & direct bank disbursal</span>
               </div>
             </div>
@@ -1096,6 +1620,53 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
           </div>
         </div>
       </div>
+
+      {/* Photo Preview Lightbox Modal */}
+      {previewPhoto && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setPreviewPhoto(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] bg-slate-900 border border-slate-750 rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/90">
+              <div className="flex items-center gap-2 truncate max-w-[80%]">
+                <ImageIcon className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                <span className="text-xs font-semibold text-white truncate">{previewPhoto.name}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewPhoto.url}
+                  download={previewPhoto.name}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                  title="Download Original"
+                >
+                  <Download className="w-4 h-4" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewPhoto(null)}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                  title="Close Preview"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-3 flex items-center justify-center bg-slate-950/70 max-h-[calc(90vh-60px)] overflow-auto">
+              <img
+                src={previewPhoto.url}
+                alt={previewPhoto.name}
+                className="max-h-[78vh] w-auto object-contain rounded-lg shadow-xl"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

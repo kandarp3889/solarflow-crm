@@ -461,6 +461,9 @@ class LoanProcess(Base):
     installation_date = Column(DateTime, nullable=True)
     installation_notes = Column(Text, nullable=True)
 
+    # Equipment & Installation Details
+    inverter_serial_number = Column(String(100), nullable=True)
+
     # Stage 3: Net Metering
     net_meter_status = Column(String(50), default="Not Started", index=True) # Not Started, Applied, Inspection Pending, Meter Issued, Meter Installed, Completed, Rejected
     net_meter_application_number = Column(String(100), nullable=True)
@@ -487,6 +490,24 @@ class LoanProcess(Base):
     lead = relationship("Lead", back_populates="loan_process")
     company = relationship("Company", back_populates="loan_processes")
     documents = relationship("LoanDocument", back_populates="loan_process", cascade="all, delete-orphan", order_by="desc(LoanDocument.created_at)")
+    panel_serials = relationship("LoanPanelSerial", back_populates="loan_process", cascade="all, delete-orphan", order_by="LoanPanelSerial.order_index")
+
+
+class LoanPanelSerial(Base):
+    __tablename__ = "loan_panel_serials"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    loan_process_id = Column(Integer, ForeignKey("loan_processes.id", ondelete="CASCADE"), nullable=False, index=True)
+    lead_id = Column(Integer, ForeignKey("leads.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    serial_number = Column(String(100), nullable=False)
+    order_index = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    loan_process = relationship("LoanProcess", back_populates="panel_serials")
+    company = relationship("Company")
+    lead = relationship("Lead")
 
 
 class LoanDocument(Base):
@@ -497,7 +518,7 @@ class LoanDocument(Base):
     loan_process_id = Column(Integer, ForeignKey("loan_processes.id", ondelete="CASCADE"), nullable=False, index=True)
     lead_id = Column(Integer, ForeignKey("leads.id", ondelete="CASCADE"), nullable=False, index=True)
     
-    # Categorization: 'loan_file' | 'installation' | 'net_meter_file' | 'inspection' | 'subsidy'
+    # Categorization: 'loan_file' | 'installation' | 'net_meter_file' | 'inspection' | 'subsidy' | 'installed_photo' | 'dcr_report'
     stage_category = Column(String(50), nullable=False, index=True)
     
     file_name = Column(String(255), nullable=False)

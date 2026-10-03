@@ -12,59 +12,77 @@ from app.schemas.schemas import LoanProcessSummary
 from app.services.notification_service import dispatch_targeted_notification
 
 ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".webp"}
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+ALLOWED_DCR_EXTENSIONS = {".pdf"}
 MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024  # 15 MB
 
 def calculate_overall_progress(lp: LoanProcess) -> int:
     """
-    Computes weighted progress (0 to 100%) across the 5 core milestones:
-    1. Loan (20%)
-    2. Installation (20%)
-    3. Net Meter (20%)
-    4. Inspection (20%)
-    5. Subsidy (20%)
+    Computes weighted progress (0 to 100%) across the workflow milestones:
+    1. Loan (18%)
+    2. Rooftop Installation (18%)
+    3. Installation Details: equipment serials & evidence (18%)
+    4. Net Meter (16%)
+    5. Technical Inspection (15%)
+    6. Subsidy (15%)
     """
     score = 0
 
-    # 1. Loan
+    # 1. Loan (18%)
     loan_s = (lp.loan_status or "").lower()
     if loan_s in ["approved", "disbursed", "completed"]:
-        score += 20
+        score += 18
     elif loan_s in ["submitted", "under review", "pending documents", "in progress"]:
-        score += 10
+        score += 9
 
-    # 2. Installation
+    # 2. Installation (18%)
     inst_s = (lp.installation_status or "").lower()
     if inst_s in ["completed"]:
-        score += 20
+        score += 18
     elif inst_s in ["panels installed", "wiring completed"]:
-        score += 15
+        score += 14
     elif inst_s in ["material delivered", "structure erected", "in progress"]:
-        score += 10
+        score += 9
 
-    # 3. Net Meter
+    # 3. Installation Details (18%)
+    # - Inverter Serial (4%)
+    if lp.inverter_serial_number and lp.inverter_serial_number.strip():
+        score += 4
+    # - Panel Serial Numbers (4%)
+    if lp.panel_serials and len(lp.panel_serials) > 0:
+        score += 4
+    # - Installed Site Photos (5%)
+    docs = lp.documents or []
+    if any(d.stage_category in ("installed_photo", "installation_photo") for d in docs):
+        score += 5
+    # - DCR Report (5%)
+    if any(d.stage_category == "dcr_report" for d in docs):
+        score += 5
+
+    # 4. Net Meter (16%)
     nm_s = (lp.net_meter_status or "").lower()
     if nm_s in ["completed", "meter installed"]:
-        score += 20
+        score += 16
     elif nm_s in ["meter issued", "inspection pending"]:
-        score += 12
+        score += 10
     elif nm_s in ["applied", "in progress"]:
-        score += 8
+        score += 6
 
-    # 4. Inspection
+    # 5. Inspection (15%)
     insp_s = (lp.inspection_status or "").lower()
     if insp_s in ["completed", "passed"]:
-        score += 20
+        score += 15
     elif insp_s in ["scheduled", "pending review", "in progress"]:
-        score += 10
+        score += 8
 
-    # 5. Subsidy
+    # 6. Subsidy (15%)
     sub_s = (lp.subsidy_status or "").lower()
     if sub_s in ["completed", "disbursed"]:
-        score += 20
+        score += 15
     elif sub_s in ["inspection approved", "document verification"]:
-        score += 14
+        score += 10
     elif sub_s in ["application submitted", "in progress"]:
-        score += 8
+        score += 6
 
     return min(100, max(0, score))
 
@@ -145,6 +163,9 @@ def build_loan_process_summary(lp: Optional[LoanProcess]) -> Optional[LoanProces
     nm_cnt = sum(1 for d in docs if d.stage_category == "net_meter_file")
     insp_cnt = sum(1 for d in docs if d.stage_category == "inspection")
     sub_cnt = sum(1 for d in docs if d.stage_category == "subsidy")
+    installed_photos_cnt = sum(1 for d in docs if d.stage_category in ("installed_photo", "installation_photo"))
+    dcr_cnt = sum(1 for d in docs if d.stage_category == "dcr_report")
+    panel_cnt = len(lp.panel_serials) if lp.panel_serials else 0
 
     return LoanProcessSummary(
         id=lp.id,
@@ -159,7 +180,10 @@ def build_loan_process_summary(lp: Optional[LoanProcess]) -> Optional[LoanProces
         installation_docs_count=inst_cnt,
         net_meter_files_count=nm_cnt,
         inspection_docs_count=insp_cnt,
-        subsidy_docs_count=sub_cnt
+        subsidy_docs_count=sub_cnt,
+        installed_photos_count=installed_photos_cnt,
+        dcr_reports_count=dcr_cnt,
+        panel_serials_count=panel_cnt
     )
 
 
@@ -174,21 +198,38 @@ def save_loan_document(
     uploaded_by: User
 ) -> LoanDocument:
     # 1. Validate category
-    valid_categories = {"loan_file", "installation", "net_meter_file", "inspection", "subsidy"}
+    valid_categories = {
+        "loan_file", "installation", "net_meter_file", "inspection", "subsidy",
+        "installed_photo", "installation_photo", "dcr_report"
+    }
     if stage_category not in valid_categories:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid stage category '{stage_category}'. Must be one of: {', '.join(valid_categories)}"
+            detail=f"Invalid stage category '{stage_category}'. Must be one of: {', '.join(sorted(valid_categories))}"
         )
 
-    # 2. Validate extension
+    # 2. Validate extension according to category
     orig_name = file.filename or "document"
     ext = os.path.splitext(orig_name)[1].lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File format '{ext}' is not supported. Please upload PDF, JPG, JPEG, PNG, or WEBP."
-        )
+
+    if stage_category in {"installed_photo", "installation_photo"}:
+        if ext not in ALLOWED_IMAGE_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Installed photos must be in JPG, JPEG, PNG, or WebP format. Provided: '{ext}'"
+            )
+    elif stage_category == "dcr_report":
+        if ext not in ALLOWED_DCR_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"DCR Report must be a PDF document. Provided: '{ext}'"
+            )
+    else:
+        if ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File format '{ext}' is not supported. Please upload PDF, JPG, JPEG, PNG, or WEBP."
+            )
 
     # 3. Create company directory
     target_dir = os.path.join(settings.UPLOAD_DIR, "loans", str(company_id))

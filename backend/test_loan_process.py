@@ -111,27 +111,82 @@ def test_loan_process_lifecycle():
     assert doc2["stage_category"] == "net_meter_file"
     print(f"[PASS] Document upload (Net Meter File): '{doc2['file_name']}'")
 
-    # 8. Verify documents list on loan process
+    # 8. Update Installation Details: Inverter & Panel Serial Numbers
+    equip_payload = {
+        "inverter_serial_number": "INV-GROWATT-99210",
+        "panel_serial_numbers": ["WAA-540W-001", "WAA-540W-002", "WAA-540W-003"]
+    }
+    put_equip = client.put(f"/api/leads/{lead_id}/loan-process", json=equip_payload, headers=headers)
+    assert put_equip.status_code == 200, f"Update equipment failed: {put_equip.text}"
+    equip_data = put_equip.json()
+    assert equip_data["inverter_serial_number"] == "INV-GROWATT-99210"
+    assert len(equip_data["panel_serial_numbers"]) == 3
+    assert equip_data["panel_serial_numbers"][0] == "WAA-540W-001"
+    print(f"[PASS] Installation Details verified: Inverter '{equip_data['inverter_serial_number']}' and {len(equip_data['panel_serial_numbers'])} panel serials saved.")
+
+    # 9. Upload Installed Photo (JPG) & DCR Report (PDF)
+    fake_jpg = io.BytesIO(b"\xff\xd8\xff\xe0\x00\x10JFIF Fake Site Photo")
+    files_photo = {"file": ("inverter_mounting_photo.jpg", fake_jpg, "image/jpeg")}
+    upload_res3 = client.post(
+        f"/api/leads/{lead_id}/loan-process/documents",
+        data={"stage_category": "installed_photo", "notes": "Completed inverter wall mount"},
+        files=files_photo,
+        headers=headers
+    )
+    assert upload_res3.status_code == 200, f"Upload installed photo failed: {upload_res3.text}"
+    photo_doc = upload_res3.json()
+    assert photo_doc["stage_category"] == "installed_photo"
+    print(f"[PASS] Installed Photo upload verified: '{photo_doc['file_name']}'")
+
+    # DCR Report
+    fake_dcr = io.BytesIO(b"%PDF-1.4 Waaree Solar DCR Certificate")
+    files_dcr = {"file": ("waaree_dcr_report.pdf", fake_dcr, "application/pdf")}
+    upload_res4 = client.post(
+        f"/api/leads/{lead_id}/loan-process/documents",
+        data={"stage_category": "dcr_report", "notes": "MNRE DCR Compliance Certificate"},
+        files=files_dcr,
+        headers=headers
+    )
+    assert upload_res4.status_code == 200, f"Upload DCR report failed: {upload_res4.text}"
+    dcr_doc = upload_res4.json()
+    assert dcr_doc["stage_category"] == "dcr_report"
+    print(f"[PASS] DCR Report upload verified: '{dcr_doc['file_name']}'")
+
+    # Test format validation: DCR must be PDF
+    invalid_dcr_file = {"file": ("invalid_dcr.jpg", io.BytesIO(b"fake image"), "image/jpeg")}
+    invalid_dcr_res = client.post(
+        f"/api/leads/{lead_id}/loan-process/documents",
+        data={"stage_category": "dcr_report"},
+        files=invalid_dcr_file,
+        headers=headers
+    )
+    assert invalid_dcr_res.status_code == 400, "Should reject non-PDF for DCR report"
+    print("[PASS] Validation verified: DCR report rejects non-PDF files.")
+
+    # 10. Verify documents list on loan process
     get_lp_with_docs = client.get(f"/api/leads/{lead_id}/loan-process", headers=headers)
     assert get_lp_with_docs.status_code == 200
     docs_list = get_lp_with_docs.json()["documents"]
-    assert len(docs_list) == 2
+    assert len(docs_list) == 4
     print(f"[PASS] Verified Loan Process documents list contains {len(docs_list)} files")
 
-    # 9. Verify Lead Detail & Leads Table summary enrichment
+    # 11. Verify Lead Detail & Leads Table summary enrichment
     lead_detail_res = client.get(f"/api/leads/{lead_id}", headers=headers)
     assert lead_detail_res.status_code == 200
     ld_data = lead_detail_res.json()
     assert ld_data["loan_process"]["loan_files_count"] == 1
     assert ld_data["loan_process"]["net_meter_files_count"] == 1
+    assert ld_data["loan_process"]["installed_photos_count"] == 1
+    assert ld_data["loan_process"]["dcr_reports_count"] == 1
+    assert ld_data["loan_process"]["panel_serials_count"] == 3
     assert ld_data["loan_process"]["loan_status"] == "Approved"
     print("[PASS] Lead response summary enrichment verified with exact stage statuses & document counts")
 
-    # 10. Delete a document
+    # 12. Delete a document
     del_res = client.delete(f"/api/leads/{lead_id}/loan-process/documents/{doc2['id']}", headers=headers)
     assert del_res.status_code == 200, f"Delete doc failed: {del_res.text}"
     get_lp_after_del = client.get(f"/api/leads/{lead_id}/loan-process", headers=headers)
-    assert len(get_lp_after_del.json()["documents"]) == 1
+    assert len(get_lp_after_del.json()["documents"]) == 3
     print("[PASS] Document deletion verified: Cleaned from database and storage")
 
     # 11. Cleanup test lead

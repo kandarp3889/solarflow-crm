@@ -178,6 +178,17 @@ class LoanDocumentResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class LoanPanelSerialResponse(BaseModel):
+    id: int
+    loan_process_id: int
+    lead_id: int
+    serial_number: str
+    order_index: int = 0
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 class LoanProcessSummary(BaseModel):
     id: int
     loan_process_number: Optional[str] = None
@@ -192,6 +203,9 @@ class LoanProcessSummary(BaseModel):
     net_meter_files_count: int = 0
     inspection_docs_count: int = 0
     subsidy_docs_count: int = 0
+    installed_photos_count: int = 0
+    dcr_reports_count: int = 0
+    panel_serials_count: int = 0
 
     class Config:
         from_attributes = True
@@ -218,6 +232,11 @@ class LoanProcessResponse(BaseModel):
     installer_name: Optional[str] = None
     installation_date: Optional[datetime] = None
     installation_notes: Optional[str] = None
+
+    # Equipment & Installation Details
+    inverter_serial_number: Optional[str] = None
+    panel_serial_numbers: List[str] = []
+    panel_serials: List[LoanPanelSerialResponse] = []
 
     # Stage 3: Net Metering
     net_meter_status: str = "Not Started"
@@ -255,6 +274,10 @@ class LoanProcessUpdate(BaseModel):
     installer_name: Optional[str] = None
     installation_date: Optional[datetime] = None
     installation_notes: Optional[str] = None
+
+    # Equipment & Installation Details
+    inverter_serial_number: Optional[str] = None
+    panel_serial_numbers: Optional[List[str]] = None
 
     net_meter_status: Optional[str] = None
     net_meter_application_number: Optional[str] = None

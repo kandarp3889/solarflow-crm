@@ -22,12 +22,14 @@ from app.models.models import (
     PipelineStage,
     DEFAULT_ROLE_PERMISSIONS,
     LoanProcess,
-    LoanDocument
+    LoanDocument,
+    LoanPanelSerial
 )
 
 __all__ = [
     "LoanProcess",
     "LoanDocument",
+    "LoanPanelSerial",
     "DEFAULT_ROLE_PERMISSIONS",
     "Base",
     "Company",

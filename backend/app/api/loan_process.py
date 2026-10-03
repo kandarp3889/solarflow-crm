@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from app.database import get_db
-from app.models.models import Lead, LoanProcess, LoanDocument, User, Company, LeadActivity
+from app.models.models import Lead, LoanProcess, LoanDocument, LoanPanelSerial, User, Company, LeadActivity
 from app.schemas.schemas import (
-    LoanProcessResponse, LoanProcessUpdate, LoanDocumentResponse, LeadResponse
+    LoanProcessResponse, LoanProcessUpdate, LoanDocumentResponse, LoanPanelSerialResponse, LeadResponse
 )
 from app.api.deps import get_current_user, get_current_company, require_permission
 from app.services.loan_service import (
@@ -27,6 +27,12 @@ def _format_loan_response(lp: LoanProcess, lead: Lead) -> LoanProcessResponse:
     res.lead_phone = lead.phone
     res.system_size_kw = lead.recommended_kw
     res.monthly_bill = lead.monthly_bill
+
+    # Equipment & Installation Details
+    res.inverter_serial_number = lp.inverter_serial_number
+    serials = [ps.serial_number for ps in (lp.panel_serials or [])]
+    res.panel_serial_numbers = serials
+    res.panel_serials = [LoanPanelSerialResponse.from_orm(ps) for ps in (lp.panel_serials or [])]
 
     # Enrich document uploaders
     doc_res_list = []
@@ -102,6 +108,30 @@ def update_lead_loan_process(
 
     update_dict = payload.dict(exclude_unset=True)
 
+    # Handle Panel Serial Numbers separately in loan_panel_serials table
+    equipment_updated = False
+    if "panel_serial_numbers" in update_dict:
+        equipment_updated = True
+        new_serials = update_dict.pop("panel_serial_numbers") or []
+        db.query(LoanPanelSerial).filter(LoanPanelSerial.loan_process_id == lp.id).delete()
+        for idx, s in enumerate(new_serials):
+            cleaned_s = (s or "").strip()
+            if cleaned_s:
+                ps_record = LoanPanelSerial(
+                    company_id=company.id,
+                    loan_process_id=lp.id,
+                    lead_id=lead.id,
+                    serial_number=cleaned_s,
+                    order_index=idx
+                )
+                db.add(ps_record)
+
+    # Handle Inverter Serial Number
+    if "inverter_serial_number" in update_dict:
+        equipment_updated = True
+        inv_val = update_dict.pop("inverter_serial_number")
+        lp.inverter_serial_number = inv_val.strip() if inv_val else None
+
     # Track status changes for targeted activity logs and notifications
     status_fields = {
         "loan_status": "Loan Application",
@@ -124,6 +154,7 @@ def update_lead_loan_process(
         setattr(lp, field, val)
 
     # Recalculate overall progress
+    db.flush()
     lp.overall_progress_pct = calculate_overall_progress(lp)
 
     # Log activities and notify
@@ -149,6 +180,18 @@ def update_lead_loan_process(
             category="lead",
             link_url=f"/leads/{lead.id}"
         )
+
+    if equipment_updated:
+        serial_count = len(lp.panel_serials) if lp.panel_serials else 0
+        act = LeadActivity(
+            company_id=company.id,
+            lead_id=lead.id,
+            user_id=current_user.id,
+            activity_type="loan_equipment_updated",
+            title="Installation Details Updated",
+            description=f"{current_user.full_name} updated solar equipment details (Inverter: {lp.inverter_serial_number or 'N/A'}, {serial_count} panel serials recorded)."
+        )
+        db.add(act)
 
     db.commit()
     db.refresh(lp)
@@ -197,6 +240,9 @@ def upload_loan_process_document(
     stage_map = {
         "loan_file": "loan_status",
         "installation": "installation_status",
+        "installed_photo": "installation_status",
+        "installation_photo": "installation_status",
+        "dcr_report": "installation_status",
         "net_meter_file": "net_meter_status",
         "inspection": "inspection_status",
         "subsidy": "subsidy_status"
@@ -211,6 +257,9 @@ def upload_loan_process_document(
     category_labels = {
         "loan_file": "Loan File",
         "installation": "Installation Document",
+        "installed_photo": "Installed Site Photo",
+        "installation_photo": "Installed Site Photo",
+        "dcr_report": "DCR Report",
         "net_meter_file": "Net Meter Document",
         "inspection": "Inspection Report",
         "subsidy": "Subsidy Document"

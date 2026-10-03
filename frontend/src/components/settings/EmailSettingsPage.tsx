@@ -13,7 +13,9 @@ import {
   ExternalLink,
   ShieldCheck,
   RefreshCw,
-  Sparkles
+  Sparkles,
+  Activity,
+  Wifi
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -50,11 +52,13 @@ export const EmailSettingsPage: React.FC = () => {
     is_enabled: true
   });
 
-  // Test Email State
+  // Test Email & Diagnostics State
   const [testEmail, setTestEmail] = useState('');
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagResult, setDiagResult] = useState<any>(null);
 
   useEffect(() => {
     fetchEmailSettings();
@@ -170,6 +174,24 @@ export const EmailSettingsPage: React.FC = () => {
       });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleDiagnose = async () => {
+    setDiagnosing(true);
+    setDiagResult(null);
+    try {
+      const res: any = await api.diagnoseEmailSettings({
+        smtp_host: form.smtp_host || 'smtp.gmail.com',
+        smtp_port: form.smtp_port || 587
+      });
+      setDiagResult(res);
+    } catch (err: any) {
+      setDiagResult({
+        error: err.message || 'Failed to complete server network diagnostics.'
+      });
+    } finally {
+      setDiagnosing(false);
     }
   };
 
@@ -460,34 +482,131 @@ export const EmailSettingsPage: React.FC = () => {
               />
             </div>
 
-            <button
-              type="button"
-              onClick={handleTestEmail}
-              disabled={testing || !testEmail}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#106828] hover:bg-[#147a30] text-white text-xs font-bold shadow-lg shadow-[#106828]/20 transition-all cursor-pointer disabled:opacity-50"
-            >
-              {testing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              <span>{testing ? 'Testing SMTP Connection...' : 'Send Test Email Now'}</span>
-            </button>
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleTestEmail}
+                disabled={testing || !testEmail}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#106828] hover:bg-[#147a30] text-white text-xs font-bold shadow-lg shadow-[#106828]/20 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {testing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                <span>{testing ? 'Testing SMTP Connection...' : 'Send Test Email Now'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDiagnose}
+                disabled={diagnosing}
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-750 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {diagnosing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Activity className="w-3.5 h-3.5 text-amber-400" />}
+                <span>{diagnosing ? 'Testing Server Connectivity...' : 'Check Server Port & DNS Status'}</span>
+              </button>
+            </div>
+
+            {/* Diagnostic Report Box */}
+            {diagResult && (
+              <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-750 text-xs space-y-2.5">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <div className="flex items-center gap-1.5 font-bold text-white">
+                    <Wifi className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Server Network Diagnostics</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono">{diagResult.host}</span>
+                </div>
+
+                {diagResult.error ? (
+                  <p className="text-red-400 text-[11px]">{diagResult.error}</p>
+                ) : (
+                  <div className="space-y-2 text-[11px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">DNS Resolution:</span>
+                      <span className="text-slate-200 font-mono text-[10px]">
+                        {diagResult.dns_ipv4 && diagResult.dns_ipv4.length > 0
+                          ? `IPv4: ${diagResult.dns_ipv4.join(', ')}`
+                          : 'Failed to resolve IPv4'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Port 587 (STARTTLS):</span>
+                      {diagResult.tcp_port_587_reachable ? (
+                        <span className="text-emerald-400 font-medium flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Reachable ({diagResult.tcp_port_587_latency_ms}ms)
+                        </span>
+                      ) : (
+                        <span className="text-red-400 font-medium flex items-center gap-1" title={diagResult.tcp_port_587_error}>
+                          <AlertCircle className="w-3 h-3" /> Blocked / Unreachable
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Port 465 (SSL):</span>
+                      {diagResult.tcp_port_465_reachable ? (
+                        <span className="text-emerald-400 font-medium flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Reachable ({diagResult.tcp_port_465_latency_ms}ms)
+                        </span>
+                      ) : (
+                        <span className="text-red-400 font-medium flex items-center gap-1" title={diagResult.tcp_port_465_error}>
+                          <AlertCircle className="w-3 h-3" /> Blocked / Unreachable
+                        </span>
+                      )}
+                    </div>
+
+                    {diagResult.is_outbound_blocked && (
+                      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 space-y-1">
+                        <p className="font-bold text-[10px] uppercase tracking-wider">Outbound SMTP Blocked by Host</p>
+                        <p className="text-[10px] leading-relaxed text-slate-300">
+                          Your server hosting environment (e.g. Render Free Tier) is actively blocking outbound connections to standard SMTP ports. Upgrade your instance or use an HTTPS-based email API.
+                        </p>
+                      </div>
+                    )}
+
+                    {diagResult.recommendations && diagResult.recommendations.length > 0 && (
+                      <div className="pt-1 border-t border-slate-800 text-[10px] text-slate-400 space-y-1">
+                        {diagResult.recommendations.map((rec: string, i: number) => (
+                          <p key={i}>&bull; {rec}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Test Result Message Box */}
             {testResult && (
               <div
-                className={`p-3.5 rounded-2xl text-xs space-y-1 ${
+                className={`p-3.5 rounded-2xl text-xs space-y-2 ${
                   testResult.success
                     ? 'bg-emerald-950/40 border border-emerald-500/40 text-emerald-300'
                     : 'bg-red-950/40 border border-red-500/40 text-red-300'
                 }`}
               >
-                <div className="flex items-center gap-1.5 font-bold">
-                  {testResult.success ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                <div className="flex items-center justify-between font-bold">
+                  <div className="flex items-center gap-1.5">
+                    {testResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                    )}
+                    <span>{testResult.success ? 'Success!' : 'Connection Failed'}</span>
+                  </div>
+                  {!testResult.success && !diagResult && (
+                    <button
+                      type="button"
+                      onClick={handleDiagnose}
+                      disabled={diagnosing}
+                      className="text-[10px] text-amber-400 hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <Activity className="w-3 h-3" /> Check Port Diagnostics
+                    </button>
                   )}
-                  <span>{testResult.success ? 'Success!' : 'Connection Failed'}</span>
                 </div>
-                <p className="text-[11px] leading-relaxed break-words">{testResult.message}</p>
+                <p className="text-[11px] leading-relaxed break-words whitespace-pre-line text-slate-200">
+                  {testResult.message}
+                </p>
               </div>
             )}
           </div>

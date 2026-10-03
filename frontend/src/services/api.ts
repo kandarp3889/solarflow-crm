@@ -509,6 +509,13 @@ class ApiClient {
     });
   }
 
+  async diagnoseEmailSettings(data?: any) {
+    return this.request('/settings/email/diagnose', {
+      method: 'POST',
+      body: JSON.stringify(data || {})
+    });
+  }
+
   // Notifications
   async getNotifications() {
     return this.request('/notifications');

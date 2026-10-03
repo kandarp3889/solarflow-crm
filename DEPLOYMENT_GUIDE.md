@@ -66,6 +66,14 @@ A local git repository has already been initialized and committed with all deplo
    ```
    *(Test in your browser: `https://solarflow-api.onrender.com/docs` will load the interactive Swagger API documentation! Tables and seed data will initialize automatically on first boot).*
 
+> ⚠️ **Important: Outbound SMTP Ports (25, 465, 587) on Render Free Tier**
+> Render blocks outbound traffic on SMTP ports 25, 465, and 587 on their **Free tier** to prevent spam abuse, which results in `[Errno 101] Network is unreachable` when attempting direct TCP connections to `smtp.gmail.com:587`.
+>
+> **To enable outgoing emails in production:**
+> - **Option A (Direct Gmail SMTP on Render):** Upgrade your Render backend instance type from **Free** to **Starter** ($7/mo). Paid Render instances immediately unlock outbound SMTP traffic on ports 587 and 465.
+> - **Option B (Alternative Hosting):** Deploy on a platform or VPS that permits outbound SMTP (e.g. Railway, Koyeb, or a cloud VPS with port 587 open in security groups).
+> - **Option C (HTTP Email API):** Use a transactional email provider over HTTPS port 443 (such as Resend, Brevo, or SendGrid API), which is never blocked by cloud hosting firewalls.
+
 ---
 
 ## 🎨 Step 4: Deploy Frontend on Vercel (1 Minute)

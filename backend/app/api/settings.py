@@ -6,7 +6,12 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.models import Company, User, UserRole
 from app.api.deps import get_current_company, require_roles
-from app.services.email_service import get_company_email_config, test_smtp_connection
+from app.services.email_service import (
+    get_company_email_config,
+    test_smtp_connection,
+    clean_smtp_password,
+    diagnose_smtp_connectivity
+)
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
 
@@ -45,6 +50,10 @@ class EmailTestRequest(BaseModel):
     from_email: Optional[str] = None
     from_name: Optional[str] = None
     use_tls: Optional[bool] = None
+
+class EmailDiagnoseRequest(BaseModel):
+    smtp_host: Optional[str] = "smtp.gmail.com"
+    smtp_port: Optional[int] = 587
 
 @router.get("/company")
 def get_company_settings(company: Company = Depends(get_current_company)):
@@ -124,6 +133,10 @@ def update_email_settings(
     if not update_data.get("smtp_password") or update_data.get("smtp_password") == "••••••••":
         if "smtp_password" in update_data:
             del update_data["smtp_password"]
+    else:
+        # Normalize and clean password (e.g. strip whitespace from 16-char Google App Passwords)
+        host = update_data.get("smtp_host") or current_email.get("smtp_host") or "smtp.gmail.com"
+        update_data["smtp_password"] = clean_smtp_password(host, update_data["smtp_password"])
 
     current_email.update(update_data)
     current_solar["email"] = current_email
@@ -154,18 +167,27 @@ def test_email_settings_endpoint(
     company: Company = Depends(get_current_company),
     current_user: User = Depends(require_roles([UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]))
 ):
+    if not test_req.to_email or "@" not in test_req.to_email.strip():
+        raise HTTPException(status_code=400, detail="Please enter a valid recipient email address for testing.")
+
     cfg = get_company_email_config(company.solar_settings)
 
-    host = test_req.smtp_host or cfg.get("smtp_host")
+    host = (test_req.smtp_host or cfg.get("smtp_host") or "smtp.gmail.com").strip()
     port = test_req.smtp_port or cfg.get("smtp_port") or 587
-    user = test_req.smtp_user or cfg.get("smtp_user")
+    user = (test_req.smtp_user or cfg.get("smtp_user") or "").strip()
 
     password = test_req.smtp_password
     if not password or password == "••••••••":
         password = cfg.get("smtp_password")
 
-    from_email = test_req.from_email or cfg.get("from_email")
-    from_name = test_req.from_name or cfg.get("from_name")
+    if not host or not user or not password:
+        raise HTTPException(
+            status_code=400,
+            detail="SMTP Host, Username, and Password are all required before sending a test email."
+        )
+
+    from_email = (test_req.from_email or cfg.get("from_email") or user).strip()
+    from_name = (test_req.from_name or cfg.get("from_name") or "SolarFlow CRM").strip()
     use_tls = test_req.use_tls if test_req.use_tls is not None else cfg.get("use_tls", True)
 
     success, message = test_smtp_connection(
@@ -175,7 +197,7 @@ def test_email_settings_endpoint(
         password=password,
         from_email=from_email,
         from_name=from_name,
-        to_email=test_req.to_email,
+        to_email=test_req.to_email.strip(),
         use_tls=use_tls
     )
 
@@ -186,6 +208,17 @@ def test_email_settings_endpoint(
         "success": True,
         "message": message
     }
+
+@router.post("/email/diagnose")
+def diagnose_email_settings_endpoint(
+    diag_req: Optional[EmailDiagnoseRequest] = None,
+    company: Company = Depends(get_current_company),
+    current_user: User = Depends(require_roles([UserRole.COMPANY_ADMIN, UserRole.SUPER_ADMIN]))
+):
+    cfg = get_company_email_config(company.solar_settings)
+    host = (diag_req.smtp_host if diag_req and diag_req.smtp_host else cfg.get("smtp_host")) or "smtp.gmail.com"
+    port = (diag_req.smtp_port if diag_req and diag_req.smtp_port else cfg.get("smtp_port")) or 587
+    return diagnose_smtp_connectivity(host=host.strip(), port=int(port))
 
 @router.get("/integrations")
 def get_integrations(company: Company = Depends(get_current_company)):

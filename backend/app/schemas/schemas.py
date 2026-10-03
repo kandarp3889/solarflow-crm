@@ -601,14 +601,14 @@ class QuotationBase(BaseModel):
     warranty: Optional[str] = None
 
     system_price: float = 240000.0
-    installation_cost: float = 25000.0
-    other_costs: float = 10000.0
-    discount: float = 5000.0
-    subtotal: float = 270000.0
-    gst_rate: float = 13.8
-    gst_amount: float = 37260.0
+    installation_cost: float = 0.0
+    other_costs: float = 0.0
+    discount: float = 0.0
+    subtotal: float = 240000.0
+    gst_rate: float = 0.0
+    gst_amount: float = 0.0
     subsidy_amount: float = 78000.0
-    final_price: float = 229260.0
+    final_price: float = 162000.0
 
     monthly_generation_kwh: float = 600.0
     monthly_savings: float = 4800.0

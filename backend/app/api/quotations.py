@@ -111,10 +111,10 @@ def create_quotation(
         wattage = max(300, int(quote_in.panel_wattage or 550))
         import math
         panel_qty = math.ceil((kw * 1000.0) / wattage)
-        inst_cost = quote_in.installation_cost if quote_in.installation_cost is not None else 25000.0
-        other_c = quote_in.other_costs if quote_in.other_costs is not None else 5000.0
-        disc_c = quote_in.discount if quote_in.discount is not None else 5000.0
-        gst_r = quote_in.gst_rate if quote_in.gst_rate is not None else 13.8
+        inst_cost = quote_in.installation_cost if quote_in.installation_cost is not None else 0.0
+        other_c = quote_in.other_costs if quote_in.other_costs is not None else 0.0
+        disc_c = quote_in.discount if quote_in.discount is not None else 0.0
+        gst_r = quote_in.gst_rate if quote_in.gst_rate is not None else 0.0
 
         subtotal = round(base_price_to_use + inst_cost + other_c - disc_c, 2)
         gst_amt = round(subtotal * (gst_r / 100.0), 2)

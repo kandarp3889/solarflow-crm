@@ -382,14 +382,14 @@ class Quotation(Base):
     # Financial Breakdown Formula:
     # (Base System Price + Installation + Other - Discount) + GST - Subsidy = Final Price
     system_price = Column(Float, default=240000.0) # Hardware base
-    installation_cost = Column(Float, default=25000.0)
-    other_costs = Column(Float, default=10000.0)
-    discount = Column(Float, default=5000.0)
-    subtotal = Column(Float, default=270000.0)
-    gst_rate = Column(Float, default=13.8) # Percentage
-    gst_amount = Column(Float, default=37260.0)
+    installation_cost = Column(Float, default=0.0)
+    other_costs = Column(Float, default=0.0)
+    discount = Column(Float, default=0.0)
+    subtotal = Column(Float, default=240000.0)
+    gst_rate = Column(Float, default=0.0) # Percentage
+    gst_amount = Column(Float, default=0.0)
     subsidy_amount = Column(Float, default=78000.0) # Central / State subsidy
-    final_price = Column(Float, default=229260.0) # Customer payable
+    final_price = Column(Float, default=162000.0) # Customer payable
 
     # Estimated Solar Returns
     monthly_generation_kwh = Column(Float, default=600.0)

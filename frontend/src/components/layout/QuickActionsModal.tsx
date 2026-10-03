@@ -58,8 +58,8 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
     system_size_kw: 3.3,
     panel_brand: 'Adani Solar',
     inverter_brand: 'Sungrow',
-    installation_cost: 22000,
-    discount: 5000
+    installation_cost: 0,
+    discount: 0
   });
 
   useEffect(() => {

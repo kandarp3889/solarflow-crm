@@ -41,11 +41,7 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
 
   // Financial components
   const [basePrice, setBasePrice] = useState('157400');
-  const [installationCost, setInstallationCost] = useState('25000');
-  const [otherCosts, setOtherCosts] = useState('5000');
-  const [discount, setDiscount] = useState('5000');
   const [subsidyAmount, setSubsidyAmount] = useState('78000');
-  const [gstRate, setGstRate] = useState('13.8');
 
   useEffect(() => {
     if (isOpen) {
@@ -110,14 +106,8 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   // Real-time authoritative financial breakdown
   const kw = parseFloat(systemSizeKw) || 0.1;
   const hardwarePrice = parseFloat(basePrice) || 0;
-  const instCost = parseFloat(installationCost) || 0;
-  const otherCost = parseFloat(otherCosts) || 0;
-  const disc = parseFloat(discount) || 0;
-  const subtotal = Math.max(0, hardwarePrice + instCost + otherCost - disc);
-  const gstPct = parseFloat(gstRate) || 13.8;
-  const gstAmount = Math.round(subtotal * (gstPct / 100));
   const subAmt = parseFloat(subsidyAmount) || 0;
-  const finalPrice = Math.max(0, Math.round(subtotal + gstAmount - subAmt));
+  const finalPrice = Math.max(0, Math.round(hardwarePrice - subAmt));
 
   // ROI Projections
   const monthlyUnits = Math.round(kw * 120);
@@ -161,12 +151,12 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         bos_name: bosName.trim() || undefined,
         warranty: warranty.trim() || undefined,
         system_price: hardwarePrice,
-        installation_cost: instCost,
-        other_costs: otherCost,
-        discount: disc,
-        subtotal: subtotal,
-        gst_rate: gstPct,
-        gst_amount: gstAmount,
+        installation_cost: 0,
+        other_costs: 0,
+        discount: 0,
+        subtotal: hardwarePrice,
+        gst_rate: 0,
+        gst_amount: 0,
         subsidy_amount: subAmt,
         final_price: finalPrice,
         monthly_generation_kwh: monthlyUnits,
@@ -381,17 +371,17 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
             </div>
           </div>
 
-          {/* Section 3: Pricing & Financial Breakdown Calculation */}
+          {/* Section 3: Pricing & Central Subsidy Calculation */}
           <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-4">
             <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
-              <span>Financials, Discount & Central Subsidy</span>
-              <span className="text-[11px] text-slate-400 font-normal">Quotation-Specific Adjustments</span>
+              <span>Financials & Central Subsidy</span>
+              <span className="text-[11px] text-slate-400 font-normal">Package Pricing</span>
             </h4>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Base System Hardware (₹)
+                  Base System Hardware (₹) *
                 </label>
                 <input
                   type="number"
@@ -400,49 +390,7 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
                   required
                   value={basePrice}
                   onChange={(e) => setBasePrice(e.target.value)}
-                  className="w-full px-3 py-2 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Installation & Balance (₹)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="500"
-                  value={installationCost}
-                  onChange={(e) => setInstallationCost(e.target.value)}
-                  className="w-full px-3 py-2 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Customer Discount (₹)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="500"
-                  value={discount}
-                  onChange={(e) => setDiscount(e.target.value)}
-                  className="w-full px-3 py-2 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Other Charges / Logistics (₹)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="500"
-                  value={otherCosts}
-                  onChange={(e) => setOtherCosts(e.target.value)}
-                  className="w-full px-3 py-2 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500"
+                  className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
 
@@ -456,33 +404,16 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
                   step="1000"
                   value={subsidyAmount}
                   onChange={(e) => setSubsidyAmount(e.target.value)}
-                  className="w-full px-3 py-2 text-xs text-emerald-400 font-bold bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  GST Rate (%)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={gstRate}
-                  onChange={(e) => setGstRate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500"
+                  className="w-full px-3.5 py-2.5 text-xs text-emerald-400 font-bold bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
             </div>
 
             {/* Live Authoritative Breakdown Card */}
             <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2 text-xs">
-              <div className="flex justify-between text-slate-400">
-                <span>Subtotal (Hardware + Installation + Other - Discount):</span>
-                <span className="font-semibold text-slate-200">₹{subtotal.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-slate-400">
-                <span>GST ({gstPct}%):</span>
-                <span className="font-semibold text-slate-200">+ ₹{gstAmount.toLocaleString('en-IN')}</span>
+              <div className="flex justify-between text-slate-300">
+                <span>Total System Hardware (Complete Package):</span>
+                <span className="font-semibold text-white">₹{hardwarePrice.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between text-emerald-400 font-semibold">
                 <span>Central Subsidy Applied:</span>

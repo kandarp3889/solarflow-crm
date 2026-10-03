@@ -199,10 +199,6 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                     <span>Base System Hardware:</span>
                     <span className="text-slate-200 font-semibold">₹{q.system_price.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-slate-400">
-                    <span>Installation & Balance:</span>
-                    <span className="text-slate-200 font-semibold">₹{q.installation_cost.toLocaleString()}</span>
-                  </div>
                   <div className="flex justify-between text-emerald-400 font-semibold">
                     <span>Central Subsidy Applied:</span>
                     <span>- ₹{q.subsidy_amount.toLocaleString()}</span>
@@ -397,18 +393,12 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                 <span>Total System Hardware (PV + Inverter + Structure):</span>
                 <span className="font-semibold text-slate-900">₹{activeQuote.system_price.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Installation, Commissioning & DISCOM Net-Metering:</span>
-                <span className="font-semibold text-slate-900">₹{activeQuote.installation_cost.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-emerald-600 font-semibold">
-                <span>True Sun Special Discount:</span>
-                <span>- ₹{activeQuote.discount.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Applicable GST (Composite 13.8%):</span>
-                <span className="font-semibold text-slate-900">₹{activeQuote.gst_amount.toLocaleString()}</span>
-              </div>
+              {activeQuote.gst_amount > 0 && (
+                <div className="flex justify-between text-slate-600">
+                  <span>Applicable GST ({activeQuote.gst_rate || 13.8}%):</span>
+                  <span className="font-semibold text-slate-900">₹{activeQuote.gst_amount.toLocaleString()}</span>
+                </div>
+              )}
               <div className="flex justify-between text-emerald-800 font-bold bg-emerald-50 p-2.5 rounded-lg border border-emerald-300">
                 <span>PM Surya Ghar Muft Bijli Yojana Central Subsidy:</span>
                 <span>- ₹{activeQuote.subsidy_amount.toLocaleString()} (Direct Bank Transfer)</span>

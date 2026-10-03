@@ -37,7 +37,7 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   const [inverterName, setInverterName] = useState('Growatt High Yield');
   const [structureName, setStructureName] = useState('Elevated Galvanized Iron');
   const [bosName, setBosName] = useState('Standard BOS Kit (ACDB/DCDB, Cables, Earthing)');
-  const [warranty, setWarranty] = useState('25 Years Panels, 5 Years Inverter, 10 Years Structure');
+  const [warranty, setWarranty] = useState('25 Years Panels, 8-10 Years Inverter');
 
   // Financial components
   const [basePrice, setBasePrice] = useState('157400');
@@ -85,7 +85,7 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     setInverterName(sys.inverter_name || '');
     setStructureName(sys.structure_name || 'Elevated Galvanized Iron');
     setBosName(sys.bos_name || 'Standard BOS Kit');
-    setWarranty(sys.warranty || '25 Years Panels, 5 Years Inverter, 10 Years Structure');
+    setWarranty(sys.warranty || '25 Years Panels, 8-10 Years Inverter');
     setBasePrice(sys.base_price ? sys.base_price.toString() : '0');
     setSubsidyAmount(sys.subsidy !== undefined ? sys.subsidy.toString() : '0');
   };

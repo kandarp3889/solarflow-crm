@@ -375,13 +375,13 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                     <td className="p-2.5 font-bold">Mounting Structure</td>
                     <td className="p-2.5">{activeQuote.structure_name || activeQuote.structure_type}</td>
                     <td className="p-2.5 text-center">Complete Set</td>
-                    <td className="p-2.5 text-right font-semibold text-emerald-700">10-15 Years</td>
+                    <td className="p-2.5 text-right text-slate-400 font-medium">-</td>
                   </tr>
                   <tr>
                     <td className="p-2.5 font-bold">Balance of System (BOS)</td>
                     <td className="p-2.5">{activeQuote.bos_name || "ACDB, DCDB, Dual Copper Earthing & Lightning Arrestor"}</td>
                     <td className="p-2.5 text-center">Complete Set</td>
-                    <td className="p-2.5 text-right font-semibold text-emerald-700">5 Years Comprehensive</td>
+                    <td className="p-2.5 text-right text-slate-400 font-medium">-</td>
                   </tr>
                 </tbody>
               </table>

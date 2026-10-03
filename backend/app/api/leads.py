@@ -84,6 +84,10 @@ def create_lead(
     lead_data = lead_in.dict()
     if lead_data.get("next_follow_up_date"):
         lead_data["next_follow_up_date"] = to_ist_naive(lead_data["next_follow_up_date"])
+    if "system_size_kw" in lead_data:
+        if lead_data.get("system_size_kw") is not None and not lead_data.get("recommended_kw"):
+            lead_data["recommended_kw"] = lead_data["system_size_kw"]
+        del lead_data["system_size_kw"]
 
     new_lead = Lead(
         **lead_data,
@@ -189,6 +193,10 @@ def update_lead(
     update_data = lead_in.dict(exclude_unset=True)
     if update_data.get("next_follow_up_date"):
         update_data["next_follow_up_date"] = to_ist_naive(update_data["next_follow_up_date"])
+    if "system_size_kw" in update_data:
+        if update_data.get("system_size_kw") is not None:
+            update_data["recommended_kw"] = update_data["system_size_kw"]
+        del update_data["system_size_kw"]
     for field, val in update_data.items():
         setattr(lead, field, val)
 

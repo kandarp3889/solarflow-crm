@@ -537,7 +537,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                 {loanProcess.loan_process_number || 'LP-WORKFLOW'}
               </span>
               <span className="text-xs text-slate-400">
-                {loanProcess.lead_name} • {loanProcess.system_size_kw || 3.0} kW System
+                {loanProcess.lead_name} {loanProcess.system_size_kw ? `• ${loanProcess.system_size_kw} kW System` : ''}
               </span>
             </div>
             <h2 className="text-lg font-bold text-white font-display">

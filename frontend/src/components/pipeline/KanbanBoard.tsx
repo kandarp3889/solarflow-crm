@@ -254,7 +254,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         <div className="flex items-center justify-between text-xs py-1 border-y border-slate-700/50">
                           <span className="text-amber-400 font-bold flex items-center gap-1">
                             <Sun className="w-3.5 h-3.5" />
-                            {lead.recommended_kw || 3.0} kW
+                            {(lead.recommended_kw ?? lead.system_size_kw ?? 0) > 0 ? `${lead.recommended_kw || lead.system_size_kw} kW` : '—'}
                           </span>
                           <span className="text-slate-300 font-semibold font-mono text-[11px]">
                             ₹{(lead.monthly_bill || 0).toLocaleString()}/mo

@@ -170,6 +170,10 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30">
                 {stageLabels[lead.stage] || lead.stage}
               </span>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30 font-display flex items-center gap-1">
+                <Sun className="w-3 h-3 text-amber-400" />
+                {(lead.recommended_kw ?? lead.system_size_kw ?? 0) > 0 ? `${lead.recommended_kw || lead.system_size_kw} kW System` : 'System Size N/A'}
+              </span>
             </div>
 
             <div className="flex items-center gap-4 mt-2 text-xs text-slate-400 flex-wrap">
@@ -287,7 +291,9 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
         <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
           <h3 className="text-sm font-bold text-white font-display border-b border-slate-800 pb-2 flex items-center justify-between">
             <span>Solar & Energy Profile</span>
-            <span className="text-amber-400 font-bold">{lead.recommended_kw} kW System</span>
+            <span className="text-amber-400 font-bold">
+              {(lead.recommended_kw ?? lead.system_size_kw ?? 0) > 0 ? `${lead.recommended_kw || lead.system_size_kw} kW System` : 'Not Specified'}
+            </span>
           </h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800">
@@ -299,7 +305,9 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
             <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800">
               <span className="text-slate-400 block text-[11px]">Estimated Monthly Units</span>
               <span className="font-bold text-slate-200 text-sm mt-0.5 block">
-                ~{Math.round((lead.recommended_kw || 3.0) * 120)} kWh
+                {(lead.recommended_kw ?? lead.system_size_kw ?? 0) > 0
+                  ? `~${Math.round((lead.recommended_kw || lead.system_size_kw || 0) * 120)} kWh`
+                  : '—'}
               </span>
             </div>
             <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800">
@@ -339,14 +347,24 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
             <div className="flex justify-between items-center pt-2 border-t border-slate-800">
               <span className="text-slate-400">Eligible Central Subsidy:</span>
               <span className="text-emerald-400 font-bold">
-                {lead.recommended_kw >= 3 ? '₹78,000' : (lead.recommended_kw >= 2 ? '₹60,000' : '₹30,000')}
+                {(() => {
+                  const kw = Number(lead.recommended_kw ?? lead.system_size_kw ?? 0);
+                  if (kw <= 0) return '—';
+                  if (kw >= 3) return '₹78,000';
+                  if (kw >= 2) return '₹60,000';
+                  if (kw >= 1) return '₹30,000';
+                  return `₹${Math.round(kw * 30000).toLocaleString('en-IN')}`;
+                })()}
               </span>
             </div>
 
             <div className="flex justify-between items-center">
               <span className="text-slate-400">Expected Annual Savings:</span>
               <span className="text-slate-200 font-semibold">
-                ~₹{Math.round(lead.recommended_kw * 120 * 8 * 12).toLocaleString()}/year
+                {(() => {
+                  const kw = Number(lead.recommended_kw ?? lead.system_size_kw ?? 0);
+                  return kw > 0 ? `~₹${Math.round(kw * 120 * 8 * 12).toLocaleString('en-IN')}/year` : '—';
+                })()}
               </span>
             </div>
 

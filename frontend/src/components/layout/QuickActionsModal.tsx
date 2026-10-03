@@ -283,10 +283,11 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
                   <label className="text-xs font-semibold text-slate-300 block mb-1">System Size (kW) *</label>
                   <input
                     type="number"
-                    step="0.5"
+                    step="any"
+                    min="0.1"
                     required
                     value={quoteForm.system_size_kw}
-                    onChange={(e) => setQuoteForm({ ...quoteForm, system_size_kw: parseFloat(e.target.value) || 5 })}
+                    onChange={(e) => setQuoteForm({ ...quoteForm, system_size_kw: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-amber-500"
                   />
                 </div>

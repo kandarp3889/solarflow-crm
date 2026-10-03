@@ -154,7 +154,7 @@ export const TasksAndActivities: React.FC<TasksAndActivitiesProps> = ({
                 </div>
                 <div className="text-right shrink-0">
                   <span className="text-xs font-bold text-amber-400">
-                    {lead.recommended_kw} kW
+                    {(lead.recommended_kw ?? lead.system_size_kw ?? 0) > 0 ? `${lead.recommended_kw || lead.system_size_kw} kW` : '—'}
                   </span>
                 </div>
               </div>

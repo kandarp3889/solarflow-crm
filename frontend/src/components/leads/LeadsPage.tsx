@@ -500,7 +500,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                                   {l.full_name}
                                 </button>
                                 <span className="text-[11px] text-slate-400 truncate block">
-                                  {l.city || 'State Capital'} • {l.recommended_kw || 3.0} kW
+                                  {l.city || 'State Capital'} • {(l.recommended_kw ?? l.system_size_kw ?? 0) > 0 ? `${l.recommended_kw || l.system_size_kw} kW` : '—'}
                                 </span>
                               </div>
                             </td>
@@ -691,7 +691,11 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                           </td>
 
                           <td className="py-3.5 px-3">
-                            <span className="font-bold text-amber-400">{l.recommended_kw} kW</span>
+                            <span className="font-bold text-amber-400">
+                              {(l.recommended_kw ?? l.system_size_kw ?? 0) > 0 
+                                ? `${l.recommended_kw || l.system_size_kw} kW` 
+                                : '—'}
+                            </span>
                           </td>
 
                           <td className="py-3.5 px-3 font-semibold text-slate-200">

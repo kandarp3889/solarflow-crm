@@ -72,7 +72,8 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
       setState(lead.state || '');
       setPincode(lead.pincode || '');
       setMonthlyBill(lead.monthly_bill ? lead.monthly_bill.toString() : '');
-      setRecommendedKw(lead.recommended_kw ? lead.recommended_kw.toString() : '');
+      const prevKw = lead.system_size_kw !== undefined && lead.system_size_kw !== null ? lead.system_size_kw : lead.recommended_kw;
+      setRecommendedKw(prevKw ? prevKw.toString() : '');
       setPropertyType(lead.property_type || 'Residential');
       setLeadSource(lead.lead_source || 'Website');
       setStage(lead.stage || 'new_lead');
@@ -120,7 +121,14 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
 
     try {
       const billAmount = parseFloat(monthlyBill) || 0;
-      const kw = parseFloat(recommendedKw) || (billAmount > 0 ? Math.max(1, Math.round((billAmount / (8 * 120)) * 10) / 10) : 3.0);
+      const parsedKw = recommendedKw.trim() !== '' ? parseFloat(recommendedKw) : 0;
+
+      // Positive numeric validation for manually entered system size
+      if (recommendedKw.trim() !== '' && (isNaN(parsedKw) || parsedKw <= 0)) {
+        alert('Please enter a valid positive numeric value for System Size (kW), e.g. 1.9, 3.6, 5, 6.6, or 10 kW.');
+        setLoading(false);
+        return;
+      }
 
       const payload = {
         full_name: customerName.trim(),
@@ -131,7 +139,8 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
         state: state || undefined,
         pincode: pincode.trim() || undefined,
         monthly_bill: billAmount,
-        recommended_kw: kw,
+        recommended_kw: parsedKw,
+        system_size_kw: parsedKw,
         property_type: propertyType || 'Residential',
         lead_source: leadSource || 'Website',
         stage: stage || 'new_lead',
@@ -308,14 +317,15 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Recommended System (kW)
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>System Size (kW)</span>
+                <span className="text-[10px] text-amber-400 font-mono">e.g. 1.9, 3.6, 5</span>
               </label>
               <input
                 type="number"
-                min="0.5"
-                step="0.1"
-                placeholder="e.g. 3.3"
+                step="any"
+                min="0.1"
+                placeholder="e.g. 1.9, 3.6, 5, 6.6, 10"
                 value={recommendedKw}
                 onChange={(e) => setRecommendedKw(e.target.value)}
                 className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"

@@ -27,7 +27,7 @@ def calculate_solar_quotation(
        - >= 3 kW: ₹78,000
     7. Final Customer Price = Subtotal + GST Amount - Subsidy
     """
-    kw = max(0.5, float(system_size_kw))
+    kw = max(0.1, float(system_size_kw))
     wattage = max(300, int(panel_wattage))
     panel_quantity = math.ceil((kw * 1000.0) / wattage)
 

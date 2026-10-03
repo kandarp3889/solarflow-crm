@@ -1,6 +1,6 @@
 from typing import Optional, List, Any, Dict, Annotated
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field, PlainSerializer
+from pydantic import BaseModel, EmailStr, Field, PlainSerializer, field_validator, model_validator
 from app.core.timezone import serialize_ist
 
 ISTDateTime = Annotated[datetime, PlainSerializer(serialize_ist, return_type=str)]
@@ -132,12 +132,33 @@ class LeadBase(BaseModel):
     property_type: Optional[str] = "Residential"
     monthly_bill: Optional[float] = 0.0
     recommended_kw: Optional[float] = 0.0
+    system_size_kw: Optional[float] = None
 
     lead_source: Optional[str] = "Website"
     assigned_to_id: Optional[int] = None
     stage: Optional[str] = "new_lead"
     win_probability_pct: Optional[int] = 20
     next_follow_up_date: Optional[datetime] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_kw_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # If system_size_kw is explicitly provided, synchronize with recommended_kw
+            if "system_size_kw" in data and data["system_size_kw"] is not None:
+                if "recommended_kw" not in data or data["recommended_kw"] is None or data["recommended_kw"] == 0:
+                    data["recommended_kw"] = data["system_size_kw"]
+            elif "recommended_kw" in data and data["recommended_kw"] is not None:
+                if data.get("system_size_kw") is None:
+                    data["system_size_kw"] = data["recommended_kw"]
+        return data
+
+    @field_validator("recommended_kw", "system_size_kw")
+    @classmethod
+    def validate_positive_kw(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and v < 0:
+            raise ValueError("System size (kW) must be a positive number")
+        return v
 
 class LeadCreate(LeadBase):
     pass
@@ -154,12 +175,32 @@ class LeadUpdate(BaseModel):
     property_type: Optional[str] = None
     monthly_bill: Optional[float] = None
     recommended_kw: Optional[float] = None
+    system_size_kw: Optional[float] = None
 
     lead_source: Optional[str] = None
     assigned_to_id: Optional[int] = None
     stage: Optional[str] = None
     win_probability_pct: Optional[int] = None
     next_follow_up_date: Optional[datetime] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_kw_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "system_size_kw" in data and data["system_size_kw"] is not None:
+                if "recommended_kw" not in data or data["recommended_kw"] is None:
+                    data["recommended_kw"] = data["system_size_kw"]
+            elif "recommended_kw" in data and data["recommended_kw"] is not None:
+                if data.get("system_size_kw") is None:
+                    data["system_size_kw"] = data["recommended_kw"]
+        return data
+
+    @field_validator("recommended_kw", "system_size_kw")
+    @classmethod
+    def validate_positive_kw(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and v < 0:
+            raise ValueError("System size (kW) must be a positive number")
+        return v
 
 # -------------------------------------------------------------
 # Loan & Project Execution Workflow Schemas
@@ -307,6 +348,14 @@ class LeadResponse(LeadBase):
     created_at: ISTDateTime
     updated_at: ISTDateTime
     loan_process: Optional[LoanProcessSummary] = None
+
+    @model_validator(mode="after")
+    def populate_system_size_kw(self):
+        if self.system_size_kw is None and self.recommended_kw is not None:
+            self.system_size_kw = self.recommended_kw
+        elif self.recommended_kw is None and self.system_size_kw is not None:
+            self.recommended_kw = self.system_size_kw
+        return self
 
     class Config:
         from_attributes = True

@@ -218,6 +218,14 @@ class Lead(Base):
     quotations = relationship("Quotation", back_populates="lead", cascade="all, delete-orphan")
     loan_process = relationship("LoanProcess", back_populates="lead", uselist=False, cascade="all, delete-orphan")
 
+    @property
+    def system_size_kw(self) -> float:
+        return self.recommended_kw or 0.0
+
+    @system_size_kw.setter
+    def system_size_kw(self, value: float):
+        self.recommended_kw = value
+
 # -------------------------------------------------------------
 # Lead Activity Timeline & Notes
 # -------------------------------------------------------------

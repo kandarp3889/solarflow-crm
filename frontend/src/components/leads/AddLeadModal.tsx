@@ -48,6 +48,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [monthlyBill, setMonthlyBill] = useState('');
+  const [systemSize, setSystemSize] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
   const [state, setState] = useState('');
   const [city, setCity] = useState('');
@@ -60,6 +61,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
     setEmail('');
     setAddress('');
     setMonthlyBill('');
+    setSystemSize('');
     setFollowUpDate('');
     setState('');
     setCity('');
@@ -96,8 +98,14 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
     try {
       const billAmount = parseFloat(monthlyBill) || 0;
-      // Estimate realistic solar rooftop system size from monthly bill (average ₹8/unit, 1kW produces 120 units/mo)
-      const estimatedKw = billAmount > 0 ? Math.max(1, Math.round((billAmount / (8 * 120)) * 10) / 10) : 3.0;
+      const parsedKw = systemSize.trim() !== '' ? parseFloat(systemSize) : 0;
+
+      // Positive numeric validation for manually entered system size
+      if (systemSize.trim() !== '' && (isNaN(parsedKw) || parsedKw <= 0)) {
+        alert('Please enter a valid positive numeric value for System Size (kW), e.g. 1.9, 3.6, 5, 6.6, or 10 kW.');
+        setLoading(false);
+        return;
+      }
 
       const payload = {
         full_name: customerName.trim(),
@@ -105,13 +113,14 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
         email: email.trim() || undefined,
         address: address.trim() || undefined,
         monthly_bill: billAmount,
+        recommended_kw: parsedKw,
+        system_size_kw: parsedKw,
         next_follow_up_date: followUpDate ? toISTIsoString(followUpDate) : undefined,
         state: state || undefined,
         city: city.trim() || undefined,
         lead_source: leadSource || 'Website',
         assigned_to_id: assignedExecutive ? parseInt(assignedExecutive) : undefined,
         property_type: 'Residential',
-        recommended_kw: estimatedKw,
         stage: 'new_lead'
       };
 
@@ -251,7 +260,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
             </div>
           </div>
 
-          {/* Monthly Bill Amount & Follow-up Date */}
+          {/* Monthly Bill Amount & System Size (kW) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
@@ -269,6 +278,25 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>System Size (kW)</span>
+                <span className="text-[10px] text-amber-400 font-mono">e.g. 1.9, 3.6, 5</span>
+              </label>
+              <input
+                type="number"
+                step="any"
+                min="0.1"
+                placeholder="e.g. 1.9, 3.6, 5, 6.6, 10"
+                value={systemSize}
+                onChange={(e) => setSystemSize(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all placeholder:text-slate-500"
+              />
+            </div>
+          </div>
+
+          {/* Follow-up Date & Lead Source */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
                 <span>Follow-up Date</span>
                 <span className="text-red-400 font-bold">*</span>
               </label>
@@ -282,10 +310,6 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 />
               </div>
             </div>
-          </div>
-
-          {/* Lead Source & Assigned Executive */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Lead Source
@@ -305,23 +329,25 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 <option value="Direct Walk-in" className="bg-slate-900 text-white">Direct Walk-in</option>
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Assigned Executive
-              </label>
-              <select
-                value={assignedExecutive}
-                onChange={(e) => setAssignedExecutive(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
-              >
-                <option value="" className="bg-slate-900 text-slate-400">Select Executive</option>
-                {executives.map((exec) => (
-                  <option key={exec.id} value={exec.id} className="bg-slate-900 text-white">
-                    {exec.full_name} ({exec.role ? exec.role.replace('_', ' ') : 'Executive'})
-                  </option>
-                ))}
-              </select>
-            </div>
+          </div>
+
+          {/* Assigned Executive */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Assigned Executive
+            </label>
+            <select
+              value={assignedExecutive}
+              onChange={(e) => setAssignedExecutive(e.target.value)}
+              className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800 border border-slate-700 rounded-xl focus:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all cursor-pointer"
+            >
+              <option value="" className="bg-slate-900 text-slate-400">Select Executive</option>
+              {executives.map((exec) => (
+                <option key={exec.id} value={exec.id} className="bg-slate-900 text-white">
+                  {exec.full_name} ({exec.role ? exec.role.replace('_', ' ') : 'Executive'})
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Action Buttons */}

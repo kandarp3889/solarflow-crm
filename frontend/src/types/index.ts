@@ -293,6 +293,7 @@ export interface Lead {
   property_type: string;
   monthly_bill: number;
   recommended_kw: number;
+  system_size_kw?: number;
 
   lead_source: string;
   assigned_to_id?: number;

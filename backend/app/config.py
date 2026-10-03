@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "SolarFlow CRM SaaS"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api"
+    TIMEZONE: str = "Asia/Kolkata"
     
     # Secret Key for JWT
     SECRET_KEY: str = Field(default="solar_super_secret_jwt_key_2026_change_in_production_987654321")

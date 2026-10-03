@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Quotation } from '../../types';
 import { api } from '../../services/api';
+import { formatISTDate } from '../../utils/date';
 
 interface QuotationListProps {
   onSelectLead: (id: number) => void;
@@ -145,9 +146,12 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                         {q.lead_name}
                       </button>
                     </div>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${statusClass}`}>
-                      {q.status}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${statusClass}`}>
+                        {q.status}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-medium">{formatISTDate(q.created_at)}</span>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -287,7 +291,7 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                 <span className="text-xs uppercase font-bold text-slate-400 block">Proposal No.</span>
                 <span className="text-lg font-bold text-[#106828] font-mono">{activeQuote.quotation_number}</span>
                 <span className="text-xs text-slate-500 block mt-1">
-                  Date: {new Date(activeQuote.created_at).toLocaleDateString()}
+                  Date: {formatISTDate(activeQuote.created_at)}
                 </span>
                 <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#FEC426]/20 text-amber-800 border border-[#FEC426]/40">
                   PM Surya Ghar Scheme

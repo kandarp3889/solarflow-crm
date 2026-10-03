@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { NotificationItem } from '../../types';
 import { notificationWS } from '../../services/websocket';
+import { formatISTRelative, formatISTTime } from '../../utils/date';
 
 interface HeaderProps {
   setIsMobileOpen: (open: boolean) => void;
@@ -271,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
                           </div>
                           <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{n.message}</p>
                           <span className="text-[9px] text-slate-500 mt-1 block">
-                            {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {formatISTRelative(n.created_at)} • {formatISTTime(n.created_at)}
                           </span>
                         </div>
                       </div>

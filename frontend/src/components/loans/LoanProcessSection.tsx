@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { api, getFileUrl } from '../../services/api';
 import { LoanProcess, LoanDocument, LoanProcessUpdatePayload } from '../../types';
+import { formatISTDate, getISTDateKey, toISTIsoString } from '../../utils/date';
 
 interface LoanProcessSectionProps {
   leadId: number;
@@ -160,7 +161,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
 
     installation_status: installationStatus,
     installer_name: installerName.trim() || undefined,
-    installation_date: installationDate ? new Date(installationDate).toISOString() : undefined,
+    installation_date: installationDate ? toISTIsoString(installationDate) : undefined,
     installation_notes: installationNotes.trim() || undefined,
 
     // Equipment Details
@@ -174,7 +175,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
 
     inspection_status: inspectionStatus,
     inspector_name: inspectorName.trim() || undefined,
-    inspection_date: inspectionDate ? new Date(inspectionDate).toISOString() : undefined,
+    inspection_date: inspectionDate ? toISTIsoString(inspectionDate) : undefined,
     inspection_notes: inspectionNotes.trim() || undefined,
 
     subsidy_status: subsidyStatus,
@@ -328,7 +329,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
 
         setInstallationStatus(data.installation_status || 'Not Started');
         setInstallerName(data.installer_name || '');
-        setInstallationDate(data.installation_date ? data.installation_date.split('T')[0] : '');
+        setInstallationDate(data.installation_date ? getISTDateKey(data.installation_date) : '');
         setInstallationNotes(data.installation_notes || '');
 
         // 3. Installation Details
@@ -346,7 +347,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
 
         setInspectionStatus(data.inspection_status || 'Not Started');
         setInspectorName(data.inspector_name || '');
-        setInspectionDate(data.inspection_date ? data.inspection_date.split('T')[0] : '');
+        setInspectionDate(data.inspection_date ? getISTDateKey(data.inspection_date) : '');
         setInspectionNotes(data.inspection_notes || '');
 
         setSubsidyStatus(data.subsidy_status || 'Not Started');
@@ -1065,7 +1066,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                             <div className="text-[10px] text-slate-400 flex items-center gap-2">
                               <span>{Math.round(doc.file_size / 1024)} KB</span>
                               <span>•</span>
-                              <span>{new Date(doc.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                              <span>{formatISTDate(doc.created_at)}</span>
                               <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                                 DCR Verified
                               </span>
@@ -1211,7 +1212,7 @@ export const LoanProcessSection: React.FC<LoanProcessSectionProps> = ({ leadId, 
                           </p>
                           <div className="flex items-center justify-between text-slate-500 font-mono text-[9px]">
                             <span>{Math.round(photo.file_size / 1024)} KB</span>
-                            <span>{new Date(photo.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                            <span>{formatISTDate(photo.created_at)}</span>
                           </div>
                         </div>
                       </div>

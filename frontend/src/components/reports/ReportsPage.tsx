@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { getISTTodayString } from '../../utils/date';
 
 export const ReportsPage: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -42,7 +43,7 @@ export const ReportsPage: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `solar_${reportType}_report_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `solar_${reportType}_report_${getISTTodayString()}.csv`;
       a.click();
     } catch (e: any) {
       alert(e.message || 'Export failed');

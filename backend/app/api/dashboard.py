@@ -14,6 +14,7 @@ from app.schemas.schemas import (
     LeadSourceItem, FunnelStageItem, RevenueBreakdownItem, TeamPerformanceItem
 )
 from app.api.deps import get_current_user, get_current_company
+from app.core.timezone import now_ist
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -121,7 +122,7 @@ def get_lead_trend(
     db: Session = Depends(get_db)
 ):
     cid = company.id
-    now = datetime.utcnow()
+    now = now_ist()
     points = []
 
     step = max(1, days // 10)

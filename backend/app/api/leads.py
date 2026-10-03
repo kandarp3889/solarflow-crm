@@ -20,6 +20,7 @@ from app.services.notification_service import (
 )
 from app.services.loan_service import ensure_loan_process_for_lead, build_loan_process_summary
 from app.api.deps import get_current_user, get_current_company
+from app.core.timezone import to_ist_naive, format_ist_date
 
 router = APIRouter(prefix="/leads", tags=["Leads"])
 
@@ -81,6 +82,8 @@ def create_lead(
     lead_code = f"SOL-2026-{count:04d}"
 
     lead_data = lead_in.dict()
+    if lead_data.get("next_follow_up_date"):
+        lead_data["next_follow_up_date"] = to_ist_naive(lead_data["next_follow_up_date"])
 
     new_lead = Lead(
         **lead_data,
@@ -184,6 +187,8 @@ def update_lead(
     old_assigned = lead.assigned_to_id
 
     update_data = lead_in.dict(exclude_unset=True)
+    if update_data.get("next_follow_up_date"):
+        update_data["next_follow_up_date"] = to_ist_naive(update_data["next_follow_up_date"])
     for field, val in update_data.items():
         setattr(lead, field, val)
 
@@ -385,7 +390,7 @@ def export_leads_csv(
             l.lead_id, l.full_name, l.phone, l.email or "", l.city or "", l.state or "",
             l.property_type, l.monthly_bill, l.recommended_kw,
             l.lead_source, l.stage,
-            l.created_at.strftime("%Y-%m-%d")
+            format_ist_date(l.created_at)
         ])
 
     csv_data = output.getvalue()

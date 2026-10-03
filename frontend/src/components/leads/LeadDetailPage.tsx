@@ -22,6 +22,7 @@ import { Lead, LeadActivity, LeadNote } from '../../types';
 import { api } from '../../services/api';
 import { EditLeadModal } from './EditLeadModal';
 import { LoanProcessSection } from '../loans/LoanProcessSection';
+import { formatISTDate, formatISTDateTime } from '../../utils/date';
 
 interface LeadDetailPageProps {
   leadId: number;
@@ -184,6 +185,14 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
               <span>Source: <strong className="text-slate-300">{lead.lead_source}</strong></span>
               <span className="text-slate-500">•</span>
               <span>Rep: <strong className="text-amber-400">{lead.assigned_to_name || 'Unassigned'}</strong></span>
+              <span className="text-slate-500">•</span>
+              <span>Captured: <strong className="text-slate-300">{formatISTDate(lead.created_at)}</strong></span>
+              {lead.next_follow_up_date && (
+                <>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-amber-400">Next Follow-up: <strong>{formatISTDateTime(lead.next_follow_up_date)}</strong></span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -403,12 +412,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-white">{act.title}</span>
                         <span className="text-[10px] text-slate-500">
-                          {new Date(act.created_at).toLocaleString([], {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                          {formatISTDateTime(act.created_at)}
                         </span>
                       </div>
                       {act.description && (
@@ -464,12 +468,7 @@ export const LeadDetailPage: React.FC<LeadDetailPageProps> = ({
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="font-semibold text-amber-400">{n.user_name || 'Sales Rep'}</span>
                       <span className="text-slate-500">
-                        {new Date(n.created_at).toLocaleString([], {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                        {formatISTDateTime(n.created_at)}
                       </span>
                     </div>
                     <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-line">

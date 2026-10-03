@@ -9,6 +9,7 @@ from app.models.models import Survey, Lead, LeadActivity, User, Company, SurveyS
 from app.schemas.schemas import SurveyCreate, SurveyUpdate, SurveyResponse
 from app.api.deps import get_current_user, get_current_company
 from app.services.notification_service import notify_survey_progress
+from app.core.timezone import now_ist, to_ist_naive, format_ist_date, serialize_ist
 
 router = APIRouter(prefix="/surveys", tags=["Site Surveys"])
 
@@ -58,6 +59,9 @@ def create_survey(
     code = f"SRV-2026-{count:04d}"
 
     survey_data = survey_in.dict()
+    if survey_data.get("scheduled_date"):
+        survey_data["scheduled_date"] = to_ist_naive(survey_data["scheduled_date"])
+
     new_survey = Survey(
         **survey_data,
         company_id=company.id,
@@ -70,13 +74,14 @@ def create_survey(
         lead.stage = LeadStage.SURVEY_SCHEDULED.value
 
     # Log activity
+    sched_str = format_ist_date(survey_data.get("scheduled_date")) if survey_data.get("scheduled_date") else "TBD"
     act = LeadActivity(
         company_id=company.id,
         lead_id=lead.id,
         user_id=current_user.id,
         activity_type="survey_scheduled",
         title=f"Site Survey Scheduled ({code})",
-        description=f"Engineer assessment scheduled for {survey_in.scheduled_date.strftime('%d %b %Y') if survey_in.scheduled_date else 'TBD'}."
+        description=f"Engineer assessment scheduled for {sched_str}."
     )
     db.add(act)
 
@@ -127,12 +132,14 @@ def update_survey(
 
     old_status = s.status
     update_data = survey_in.dict(exclude_unset=True)
+    if update_data.get("scheduled_date"):
+        update_data["scheduled_date"] = to_ist_naive(update_data["scheduled_date"])
     for k, v in update_data.items():
         setattr(s, k, v)
 
     # If completed, stamp timestamp and update lead stage
     if survey_in.status == SurveyStatus.COMPLETED.value and old_status != SurveyStatus.COMPLETED.value:
-        s.completed_date = datetime.utcnow()
+        s.completed_date = now_ist()
         if s.lead and s.lead.stage in [LeadStage.SURVEY_SCHEDULED.value]:
             s.lead.stage = LeadStage.SURVEY_COMPLETED.value
 
@@ -175,7 +182,7 @@ def upload_survey_file(
         raise HTTPException(status_code=404, detail="Survey not found")
 
     current_files = list(s.files or [])
-    file_info["uploaded_at"] = datetime.utcnow().isoformat()
+    file_info["uploaded_at"] = serialize_ist(now_ist())
     current_files.append(file_info)
     s.files = current_files
 

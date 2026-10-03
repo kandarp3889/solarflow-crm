@@ -8,6 +8,7 @@ from sqlalchemy import func, desc
 from app.database import get_db
 from app.models.models import Lead, Quotation, Survey, User, LeadSource, Company
 from app.api.deps import get_current_company, require_permission
+from app.core.timezone import format_ist_date
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -32,7 +33,7 @@ def get_report_data(
                 "bill": l.monthly_bill,
                 "source": l.lead_source,
                 "stage": l.stage,
-                "created_at": l.created_at.strftime("%Y-%m-%d")
+                "created_at": format_ist_date(l.created_at)
             }
             for l in items
         ]
@@ -48,7 +49,7 @@ def get_report_data(
                 "sales_rep": l.assigned_to.full_name if l.assigned_to else "Unassigned",
                 "source": l.lead_source,
                 "city": l.city,
-                "closed_date": l.updated_at.strftime("%Y-%m-%d")
+                "closed_date": format_ist_date(l.updated_at)
             }
             for l in items
         ]
@@ -66,7 +67,7 @@ def get_report_data(
                 "subsidy": q.subsidy_amount,
                 "final_price": q.final_price,
                 "status": q.status,
-                "created_at": q.created_at.strftime("%Y-%m-%d")
+                "created_at": format_ist_date(q.created_at)
             }
             for q in items
         ]

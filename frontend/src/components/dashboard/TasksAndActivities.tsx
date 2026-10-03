@@ -10,6 +10,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { FollowUp, Lead } from '../../types';
+import { formatISTDate, formatISTTime, parseToISTDate } from '../../utils/date';
 
 interface TasksAndActivitiesProps {
   followups: FollowUp[];
@@ -26,7 +27,8 @@ export const TasksAndActivities: React.FC<TasksAndActivitiesProps> = ({
   onOpenQuickAction,
   onCompleteFollowup
 }) => {
-  const overdueItems = followups.filter(f => f.status === 'overdue' || (f.status === 'pending' && new Date(f.scheduled_date) < new Date()));
+  const now = new Date();
+  const overdueItems = followups.filter(f => f.status === 'overdue' || (f.status === 'pending' && (parseToISTDate(f.scheduled_date) ? parseToISTDate(f.scheduled_date)! < now : false)));
   const todayItems = followups.filter(f => f.status === 'pending');
 
   return (
@@ -54,7 +56,7 @@ export const TasksAndActivities: React.FC<TasksAndActivitiesProps> = ({
                     <p className="text-xs font-semibold text-slate-200 truncate">{item.lead_name}</p>
                     <p className="text-[11px] text-slate-400 truncate">{item.notes || 'Follow-up call'}</p>
                     <span className="text-[10px] text-amber-400 font-medium">
-                      {new Date(item.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {formatISTTime(item.scheduled_date)}
                     </span>
                   </div>
                   <button
@@ -104,7 +106,7 @@ export const TasksAndActivities: React.FC<TasksAndActivitiesProps> = ({
                     <p className="text-xs font-semibold text-red-200 truncate">{item.lead_name}</p>
                     <p className="text-[11px] text-slate-400 truncate">{item.lead_phone}</p>
                     <span className="text-[10px] text-red-400 font-medium">
-                      Scheduled: {new Date(item.scheduled_date).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                      Scheduled: {formatISTDate(item.scheduled_date)}, {formatISTTime(item.scheduled_date)}
                     </span>
                   </div>
                   <button

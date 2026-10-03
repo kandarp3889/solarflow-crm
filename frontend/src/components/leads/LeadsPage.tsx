@@ -25,6 +25,7 @@ import { EditLeadModal } from './EditLeadModal';
 import { getStageColorConfig } from '../pipeline/PipelineStagesModal';
 import { LoanProcessModal } from '../loans/LoanProcessModal';
 import { getStatusBadgeColor } from '../loans/LoanProcessSection';
+import { formatISTDate, formatISTDateTime, getISTTodayString } from '../../utils/date';
 
 interface LeadsPageProps {
   onSelectLead: (id: number) => void;
@@ -162,7 +163,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `solar_leads_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `solar_leads_${getISTTodayString()}.csv`;
       a.click();
     } catch (e: any) {
       alert(e.message || 'Export failed');
@@ -674,8 +675,13 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({
                                 {l.full_name}
                               </button>
                               <span className="text-[11px] text-slate-400 truncate block">
-                                {l.city || 'State Capital'} • {l.property_type}
+                                {l.city || 'State Capital'} • {formatISTDate(l.created_at)}
                               </span>
+                              {l.next_follow_up_date && (
+                                <span className="text-[10px] text-amber-400/90 font-medium block truncate">
+                                  Follow-up: {formatISTDate(l.next_follow_up_date)}
+                                </span>
+                              )}
                             </div>
                           </td>
 

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { FollowUp, Survey } from '../../types';
+import { getISTDateKey, formatISTTime, getISTTodayString } from '../../utils/date';
 
 interface CalendarViewProps {
   onSelectLead: (id: number) => void;
@@ -76,8 +77,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       id: `f-${f.id}`,
       lead_id: f.lead_id,
       title: `${f.follow_up_type.toUpperCase()}: ${f.lead_name}`,
-      dateStr: f.scheduled_date.slice(0, 10),
-      timeStr: new Date(f.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      dateStr: getISTDateKey(f.scheduled_date),
+      timeStr: formatISTTime(f.scheduled_date),
       type: 'followup',
       color: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
       raw: f
@@ -86,8 +87,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       id: `s-${s.id}`,
       lead_id: s.lead_id,
       title: `SURVEY: ${s.lead_name} (${s.recommended_system_size}kW)`,
-      dateStr: (s.scheduled_date || '').slice(0, 10),
-      timeStr: s.scheduled_date ? new Date(s.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:00 AM',
+      dateStr: getISTDateKey(s.scheduled_date),
+      timeStr: s.scheduled_date ? formatISTTime(s.scheduled_date) : '10:00 AM',
       type: 'survey',
       color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
       raw: s
@@ -210,7 +211,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             const dayNum = i + 1;
             const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
             const dayEvents = events.filter(e => e.dateStr === dateKey);
-            const isToday = new Date().toISOString().slice(0, 10) === dateKey;
+            const isToday = getISTTodayString() === dateKey;
 
             return (
               <div

@@ -17,6 +17,7 @@ from app.services.loan_service import (
     build_loan_process_summary
 )
 from app.services.notification_service import dispatch_targeted_notification
+from app.core.timezone import to_ist_naive
 
 router = APIRouter(tags=["Loan Process & Execution"])
 
@@ -150,6 +151,11 @@ def update_lead_loan_process(
                 changed_stages.append((stage_label, old_val, new_val))
 
     # Apply updates
+    if update_dict.get("installation_date"):
+        update_dict["installation_date"] = to_ist_naive(update_dict["installation_date"])
+    if update_dict.get("inspection_date"):
+        update_dict["inspection_date"] = to_ist_naive(update_dict["inspection_date"])
+
     for field, val in update_dict.items():
         setattr(lp, field, val)
 

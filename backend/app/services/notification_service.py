@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.models import Notification, User, UserRole, Lead, FollowUp, Survey, Quotation, Company
 from app.services.email_service import send_notification_email
 from app.services.websocket_manager import emit_realtime_notification
+from app.core.timezone import format_ist_datetime, format_ist_date, serialize_ist
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +172,7 @@ def dispatch_targeted_notification(
                                 "category": notif.category,
                                 "link_url": notif.link_url,
                                 "is_read": notif.is_read,
-                                "created_at": notif.created_at.isoformat() if notif.created_at else None
+                                "created_at": serialize_ist(notif.created_at) if notif.created_at else None
                             }
                         }
                     )
@@ -248,7 +249,7 @@ def notify_followup_scheduled(db: Session, company_id: int, lead: Lead, followup
     actor_user = _get_actor_user(actor)
     actor_name = _get_actor_name(actor)
     title = f"Follow-up Scheduled: {lead.full_name if lead else 'Customer'}"
-    date_str = followup.scheduled_date.strftime('%d %b %Y, %I:%M %p') if followup.scheduled_date else "upcoming"
+    date_str = format_ist_datetime(followup.scheduled_date) if followup.scheduled_date else "upcoming"
     note_str = f" Note: {followup.notes}" if followup.notes else ""
     message = f"{actor_name} scheduled a {followup.follow_up_type.title()} follow-up for {date_str}.{note_str}"
     target_assigned_id = followup.assigned_to_id or (lead.assigned_to_id if lead else None)
@@ -290,7 +291,7 @@ def notify_survey_progress(db: Session, company_id: int, lead: Lead, survey: Sur
     if action_type.lower() == "completed":
         message = f"Rooftop survey {survey.survey_code} completed by {actor_name}. Available roof: {survey.available_roof_area} sqft, Recommended: {survey.recommended_system_size} kW."
     else:
-        date_str = survey.scheduled_date.strftime('%d %b %Y') if survey.scheduled_date else "TBD"
+        date_str = format_ist_date(survey.scheduled_date) if survey.scheduled_date else "TBD"
         message = f"Rooftop site survey {survey.survey_code} {action_type} by {actor_name} for {date_str}."
     target_assigned_id = survey.assigned_engineer_id or (lead.assigned_to_id if lead else None)
     return dispatch_targeted_notification(

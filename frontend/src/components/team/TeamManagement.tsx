@@ -27,6 +27,7 @@ import {
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { User, RoleMetadata, PermissionCategory, RolePermissionsMatrix } from '../../types';
+import { formatISTDateTime } from '../../utils/date';
 import { UserModal } from './UserModal';
 import { ResetPasswordModal } from './ResetPasswordModal';
 import { UserPermissionsModal } from './UserPermissionsModal';
@@ -803,7 +804,7 @@ export const TeamManagement: React.FC = () => {
                     </div>
 
                     <div className="text-right text-[11px] text-slate-500 whitespace-nowrap font-mono">
-                      {new Date(log.created_at).toLocaleString()}
+                      {formatISTDateTime(log.created_at)}
                     </div>
                   </div>
                 ))}

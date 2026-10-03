@@ -6,6 +6,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
+from app.core.timezone import now_ist
 
 class UserRole(str, enum.Enum):
     SUPER_ADMIN = "super_admin"
@@ -141,8 +142,8 @@ class Company(Base):
     # Tenant-defined custom roles
     custom_roles = Column(JSON, default=list)
     
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
+    updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
 
     # Relationships
     users = relationship("User", back_populates="company", cascade="all, delete-orphan")
@@ -168,7 +169,7 @@ class User(Base):
     avatar_url = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True)
     custom_permissions = Column(JSON, default=list)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
 
     company = relationship("Company", back_populates="users")
     assigned_leads = relationship("Lead", back_populates="assigned_to", foreign_keys="[Lead.assigned_to_id]")
@@ -204,8 +205,8 @@ class Lead(Base):
     win_probability_pct = Column(Integer, default=20)
     next_follow_up_date = Column(DateTime, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist, index=True)
+    updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
 
     # Relationships
     company = relationship("Company", back_populates="leads")
@@ -230,7 +231,7 @@ class LeadActivity(Base):
     activity_type = Column(String(50), nullable=False) # call, whatsapp, stage_changed, survey_scheduled, note_added, etc.
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=now_ist, index=True)
 
     lead = relationship("Lead", back_populates="activities")
     user = relationship("User")
@@ -243,7 +244,7 @@ class LeadNote(Base):
     lead_id = Column(Integer, ForeignKey("leads.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=now_ist, index=True)
 
     lead = relationship("Lead", back_populates="notes")
     user = relationship("User")
@@ -264,7 +265,7 @@ class FollowUp(Base):
     notes = Column(Text, nullable=True)
     reminder = Column(Boolean, default=True)
     completed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
 
     lead = relationship("Lead", back_populates="followups")
     assigned_to = relationship("User")
@@ -302,8 +303,8 @@ class Survey(Base):
     # Stored uploaded files metadata: list of {name, url, type, size, uploaded_at}
     files = Column(JSON, default=[])
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
+    updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
 
     lead = relationship("Lead", back_populates="surveys")
     assigned_engineer = relationship("User")
@@ -351,8 +352,8 @@ class Quotation(Base):
     valid_until = Column(DateTime, nullable=True)
     notes = Column(Text, nullable=True)
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
+    updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
 
     lead = relationship("Lead", back_populates="quotations")
     created_by = relationship("User")
@@ -373,7 +374,7 @@ class PipelineStage(Base):
     win_probability_pct = Column(Integer, default=50) # 0 to 100
     is_won = Column(Boolean, default=False)
     is_lost = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
 
     company = relationship("Company", back_populates="pipeline_stages")
 
@@ -404,7 +405,7 @@ class AutomationRule(Base):
     conditions = Column(JSON, default={})
     actions = Column(JSON, default=[]) # list of action objects
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
 
 # -------------------------------------------------------------
 # Notifications
@@ -420,7 +421,7 @@ class Notification(Base):
     category = Column(String(50), default="lead") # lead, followup, survey, quotation
     link_url = Column(String(255), nullable=True)
     is_read = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=now_ist, index=True)
 
 # -------------------------------------------------------------
 # Audit Logs
@@ -436,7 +437,7 @@ class AuditLog(Base):
     entity_id = Column(String(100), nullable=True)
     ip_address = Column(String(50), nullable=True)
     details = Column(JSON, default={})
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=now_ist, index=True)
 
 # -------------------------------------------------------------
 # Loan & Project Execution Workflow (For Won Deals)
@@ -483,8 +484,8 @@ class LoanProcess(Base):
     subsidy_notes = Column(Text, nullable=True)
 
     overall_progress_pct = Column(Integer, default=0) # 0 to 100
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
+    updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
 
     # Relationships
     lead = relationship("Lead", back_populates="loan_process")
@@ -503,7 +504,7 @@ class LoanPanelSerial(Base):
     
     serial_number = Column(String(100), nullable=False)
     order_index = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
 
     loan_process = relationship("LoanProcess", back_populates="panel_serials")
     company = relationship("Company")
@@ -527,7 +528,7 @@ class LoanDocument(Base):
     mime_type = Column(String(100), nullable=True)
     uploaded_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     notes = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_ist)
 
     loan_process = relationship("LoanProcess", back_populates="documents")
     uploaded_by = relationship("User")

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
 from app.models.models import AutomationRule, FollowUp, Notification, LeadActivity, User, Lead
+from app.core.timezone import now_ist
 
 def process_automation_event(
     event_name: str,
@@ -37,7 +38,7 @@ def process_automation_event(
                     company_id=company_id,
                     lead_id=lead.id,
                     assigned_to_id=lead.assigned_to_id,
-                    scheduled_date=datetime.utcnow() + timedelta(days=days_offset),
+                    scheduled_date=now_ist() + timedelta(days=days_offset),
                     follow_up_type=followup_type,
                     status="pending",
                     notes=notes,

@@ -13,6 +13,7 @@ from app.schemas.schemas import (
 from app.services.quotation_calc import calculate_solar_quotation
 from app.services.notification_service import notify_quotation_progress
 from app.api.deps import get_current_user, get_current_company
+from app.core.timezone import now_ist, to_ist_naive
 
 router = APIRouter(prefix="/quotations", tags=["Solar Quotations"])
 
@@ -105,7 +106,7 @@ def create_quotation(
         "monthly_generation_kwh": calc["monthly_generation_kwh"],
         "monthly_savings": calc["monthly_savings"],
         "payback_years": calc["payback_years"],
-        "valid_until": datetime.utcnow() + timedelta(days=15)
+        "valid_until": to_ist_naive(quote_in.valid_until) if quote_in.valid_until else (now_ist() + timedelta(days=15))
     })
 
     new_quote = Quotation(

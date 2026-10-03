@@ -1,6 +1,10 @@
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Any, Dict, Annotated
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, PlainSerializer
+from app.core.timezone import serialize_ist
+
+ISTDateTime = Annotated[datetime, PlainSerializer(serialize_ist, return_type=str)]
+OptionalISTDateTime = Annotated[Optional[datetime], PlainSerializer(serialize_ist, return_type=Optional[str])]
 
 # -------------------------------------------------------------
 # Auth & User Schemas
@@ -66,7 +70,7 @@ class UserResponse(BaseModel):
     is_active: bool
     custom_permissions: Optional[List[str]] = None
     permissions: Optional[List[str]] = None
-    created_at: Optional[datetime] = None
+    created_at: OptionalISTDateTime = None
 
     class Config:
         from_attributes = True
@@ -98,7 +102,7 @@ class LeadNoteResponse(BaseModel):
     user_id: int
     user_name: Optional[str] = None
     content: str
-    created_at: datetime
+    created_at: ISTDateTime
 
     class Config:
         from_attributes = True
@@ -111,7 +115,7 @@ class LeadActivityResponse(BaseModel):
     description: Optional[str] = None
     user_id: Optional[int] = None
     user_name: Optional[str] = None
-    created_at: datetime
+    created_at: ISTDateTime
 
     class Config:
         from_attributes = True
@@ -173,7 +177,7 @@ class LoanDocumentResponse(BaseModel):
     uploaded_by_id: Optional[int] = None
     uploaded_by_name: Optional[str] = None
     notes: Optional[str] = None
-    created_at: datetime
+    created_at: ISTDateTime
 
     class Config:
         from_attributes = True
@@ -184,7 +188,7 @@ class LoanPanelSerialResponse(BaseModel):
     lead_id: int
     serial_number: str
     order_index: int = 0
-    created_at: datetime
+    created_at: ISTDateTime
 
     class Config:
         from_attributes = True
@@ -230,7 +234,7 @@ class LoanProcessResponse(BaseModel):
     # Stage 2: Installation
     installation_status: str = "Not Started"
     installer_name: Optional[str] = None
-    installation_date: Optional[datetime] = None
+    installation_date: OptionalISTDateTime = None
     installation_notes: Optional[str] = None
 
     # Equipment & Installation Details
@@ -247,7 +251,7 @@ class LoanProcessResponse(BaseModel):
     # Stage 4: Inspection
     inspection_status: str = "Not Started"
     inspector_name: Optional[str] = None
-    inspection_date: Optional[datetime] = None
+    inspection_date: OptionalISTDateTime = None
     inspection_notes: Optional[str] = None
 
     # Stage 5: Subsidy
@@ -258,8 +262,8 @@ class LoanProcessResponse(BaseModel):
 
     overall_progress_pct: int = 0
     documents: List[LoanDocumentResponse] = []
-    created_at: datetime
-    updated_at: datetime
+    created_at: ISTDateTime
+    updated_at: ISTDateTime
 
     class Config:
         from_attributes = True
@@ -298,10 +302,10 @@ class LeadResponse(LeadBase):
     id: int
     company_id: int
     lead_id: str
-    next_follow_up_date: Optional[datetime] = None
+    next_follow_up_date: OptionalISTDateTime = None
     assigned_to_name: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: ISTDateTime
+    updated_at: ISTDateTime
     loan_process: Optional[LoanProcessSummary] = None
 
     class Config:
@@ -343,12 +347,13 @@ class FollowUpUpdate(BaseModel):
 class FollowUpResponse(FollowUpBase):
     id: int
     company_id: int
+    scheduled_date: ISTDateTime
     status: str
-    completed_at: Optional[datetime] = None
+    completed_at: OptionalISTDateTime = None
     lead_name: Optional[str] = None
     lead_phone: Optional[str] = None
     assigned_to_name: Optional[str] = None
-    created_at: datetime
+    created_at: ISTDateTime
 
     class Config:
         from_attributes = True
@@ -402,13 +407,14 @@ class SurveyResponse(SurveyBase):
     id: int
     company_id: int
     survey_code: str
-    completed_date: Optional[datetime] = None
+    scheduled_date: OptionalISTDateTime = None
+    completed_date: OptionalISTDateTime = None
     lead_name: Optional[str] = None
     lead_phone: Optional[str] = None
     lead_address: Optional[str] = None
     assigned_engineer_name: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: ISTDateTime
+    updated_at: ISTDateTime
 
     class Config:
         from_attributes = True
@@ -511,8 +517,9 @@ class QuotationResponse(QuotationBase):
     lead_email: Optional[str] = None
     lead_address: Optional[str] = None
     created_by_name: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
+    valid_until: OptionalISTDateTime = None
+    created_at: ISTDateTime
+    updated_at: ISTDateTime
 
     class Config:
         from_attributes = True
@@ -631,7 +638,7 @@ class NotificationResponse(BaseModel):
     category: str
     link_url: Optional[str] = None
     is_read: bool
-    created_at: datetime
+    created_at: ISTDateTime
 
     class Config:
         from_attributes = True
@@ -654,7 +661,7 @@ class AutomationRuleResponse(BaseModel):
     conditions: Dict[str, Any]
     actions: List[Dict[str, Any]]
     is_active: bool
-    created_at: datetime
+    created_at: ISTDateTime
 
     class Config:
         from_attributes = True
@@ -671,7 +678,7 @@ class AuditLogResponse(BaseModel):
     entity_id: Optional[str] = None
     ip_address: Optional[str] = None
     details: Dict[str, Any]
-    created_at: datetime
+    created_at: ISTDateTime
 
     class Config:
         from_attributes = True

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Edit, Save } from 'lucide-react';
 import { api } from '../../services/api';
 import { Lead } from '../../types';
+import { toISTIsoString, getISTDateKey } from '../../utils/date';
 
 interface EditLeadModalProps {
   isOpen: boolean;
@@ -78,15 +79,7 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
       setAssignedExecutive(lead.assigned_to_id ? lead.assigned_to_id.toString() : '');
 
       if (lead.next_follow_up_date) {
-        try {
-          const d = new Date(lead.next_follow_up_date);
-          const yyyy = d.getFullYear();
-          const mm = String(d.getMonth() + 1).padStart(2, '0');
-          const dd = String(d.getDate()).padStart(2, '0');
-          setFollowUpDate(`${yyyy}-${mm}-${dd}`);
-        } catch {
-          setFollowUpDate('');
-        }
+        setFollowUpDate(getISTDateKey(lead.next_follow_up_date));
       } else {
         setFollowUpDate('');
       }
@@ -143,7 +136,7 @@ export const EditLeadModal: React.FC<EditLeadModalProps> = ({
         lead_source: leadSource || 'Website',
         stage: stage || 'new_lead',
         assigned_to_id: assignedExecutive ? parseInt(assignedExecutive) : undefined,
-        next_follow_up_date: followUpDate ? new Date(followUpDate).toISOString() : undefined
+        next_follow_up_date: followUpDate ? toISTIsoString(followUpDate) : undefined
       };
 
       await api.updateLead(lead.id, payload);

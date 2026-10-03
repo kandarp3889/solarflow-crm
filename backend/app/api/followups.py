@@ -9,6 +9,7 @@ from app.models.models import FollowUp, Lead, LeadActivity, User, Company, Follo
 from app.schemas.schemas import FollowUpCreate, FollowUpUpdate, FollowUpResponse
 from app.api.deps import get_current_user, get_current_company
 from app.services.notification_service import notify_followup_scheduled, notify_followup_completed
+from app.core.timezone import now_ist, to_ist_naive, format_ist_datetime
 
 router = APIRouter(prefix="/followups", tags=["Follow-ups"])
 
@@ -29,8 +30,8 @@ def get_followups(
     if assigned_to:
         query = query.filter(FollowUp.assigned_to_id == assigned_to)
 
-    # Dynamic overdue check: if pending and scheduled_date < now
-    now = datetime.utcnow()
+    # Dynamic overdue check: if pending and scheduled_date < now (evaluated in Asia/Kolkata)
+    now = now_ist()
     items = query.order_by(FollowUp.scheduled_date.asc()).all()
 
     result = []
@@ -71,12 +72,13 @@ def create_followup(
         raise HTTPException(status_code=404, detail="Lead not found")
 
     assigned_id = follow_in.assigned_to_id or lead.assigned_to_id or current_user.id
+    scheduled_ist = to_ist_naive(follow_in.scheduled_date)
 
     new_followup = FollowUp(
         company_id=company.id,
         lead_id=lead.id,
         assigned_to_id=assigned_id,
-        scheduled_date=follow_in.scheduled_date,
+        scheduled_date=scheduled_ist,
         follow_up_type=follow_in.follow_up_type,
         status="pending",
         notes=follow_in.notes,
@@ -85,7 +87,7 @@ def create_followup(
     db.add(new_followup)
 
     # Update lead's next follow-up date
-    lead.next_follow_up_date = follow_in.scheduled_date
+    lead.next_follow_up_date = scheduled_ist
 
     # Log activity on lead
     act = LeadActivity(
@@ -94,7 +96,7 @@ def create_followup(
         user_id=current_user.id,
         activity_type="follow_up_scheduled",
         title=f"Follow-up Scheduled ({follow_in.follow_up_type.title()})",
-        description=f"Scheduled for {follow_in.scheduled_date.strftime('%d %b %Y, %I:%M %p')}. Note: {follow_in.notes or 'None'}"
+        description=f"Scheduled for {format_ist_datetime(scheduled_ist)}. Note: {follow_in.notes or 'None'}"
     )
     db.add(act)
 
@@ -133,7 +135,7 @@ def complete_followup(
         raise HTTPException(status_code=404, detail="Follow-up not found")
 
     f.status = FollowUpStatus.COMPLETED.value
-    f.completed_at = datetime.utcnow()
+    f.completed_at = now_ist()
 
     act = LeadActivity(
         company_id=company.id,

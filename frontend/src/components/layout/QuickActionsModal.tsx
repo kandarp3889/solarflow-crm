@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Plus, Calendar, ClipboardCheck, FileSpreadsheet, Check } from 'lucide-react';
 import { api } from '../../services/api';
 import { AddLeadModal } from '../leads/AddLeadModal';
+import { getISTNowString, toISTIsoString } from '../../utils/date';
 
 interface QuickActionsModalProps {
   isOpen: boolean;
@@ -18,18 +19,18 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
 
-  // Follow-up Form State
+  // Follow-up Form State (default scheduled in IST +24 hours)
   const [followupForm, setFollowupForm] = useState({
     lead_id: 1,
     follow_up_type: 'call',
-    scheduled_date: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
+    scheduled_date: getISTNowString(1440),
     notes: 'Discuss True Sun rooftop solar sizing and PM Surya Ghar subsidy eligibility.'
   });
 
-  // Survey Form State
+  // Survey Form State (default scheduled in IST +48 hours)
   const [surveyForm, setSurveyForm] = useState({
     lead_id: 1,
-    scheduled_date: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 16),
+    scheduled_date: getISTNowString(2880),
     roof_type: 'Concrete Flat',
     roof_area: 450,
     phase: 'Single Phase',
@@ -59,7 +60,7 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
     try {
       await api.createFollowup({
         ...followupForm,
-        scheduled_date: new Date(followupForm.scheduled_date).toISOString()
+        scheduled_date: toISTIsoString(followupForm.scheduled_date)!
       });
       onSuccess();
       onClose();
@@ -76,7 +77,7 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
     try {
       await api.createSurvey({
         ...surveyForm,
-        scheduled_date: new Date(surveyForm.scheduled_date).toISOString()
+        scheduled_date: toISTIsoString(surveyForm.scheduled_date)!
       });
       onSuccess();
       onClose();

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Calendar as CalendarIcon } from 'lucide-react';
 import { api } from '../../services/api';
+import { toISTIsoString } from '../../utils/date';
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -104,7 +105,7 @@ export const AddLeadModal: React.FC<AddLeadModalProps> = ({
         email: email.trim() || undefined,
         address: address.trim() || undefined,
         monthly_bill: billAmount,
-        next_follow_up_date: followUpDate ? new Date(followUpDate).toISOString() : undefined,
+        next_follow_up_date: followUpDate ? toISTIsoString(followUpDate) : undefined,
         state: state || undefined,
         city: city.trim() || undefined,
         lead_source: leadSource || 'Website',

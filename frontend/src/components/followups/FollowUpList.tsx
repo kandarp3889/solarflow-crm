@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { FollowUp } from '../../types';
 import { api } from '../../services/api';
+import { formatISTDate, formatISTDateTime, parseToISTDate } from '../../utils/date';
 
 interface FollowUpListProps {
   onSelectLead: (id: number) => void;
@@ -74,20 +75,21 @@ export const FollowUpList: React.FC<FollowUpListProps> = ({
   };
 
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
+  const todayIST = formatISTDate(now);
 
   const filteredItems = followups.filter(f => {
-    const dStr = f.scheduled_date.slice(0, 10);
-    const isPast = new Date(f.scheduled_date) < now;
+    const fDate = parseToISTDate(f.scheduled_date);
+    const isPast = fDate ? fDate < now : false;
+    const isToday = formatISTDate(f.scheduled_date) === todayIST;
 
     if (tab === 'today') {
-      return f.status === 'pending' && dStr === todayStr;
+      return f.status === 'pending' && isToday;
     }
     if (tab === 'overdue') {
-      return f.status === 'overdue' || (f.status === 'pending' && isPast && dStr !== todayStr);
+      return f.status === 'overdue' || (f.status === 'pending' && isPast && !isToday);
     }
     if (tab === 'upcoming') {
-      return f.status === 'pending' && !isPast && dStr !== todayStr;
+      return f.status === 'pending' && !isPast && !isToday;
     }
     if (tab === 'completed') {
       return f.status === 'completed';
@@ -129,9 +131,9 @@ export const FollowUpList: React.FC<FollowUpListProps> = ({
       {/* Segmented Filter Tabs */}
       <div className="flex border-b border-slate-800 bg-slate-900/60 p-1.5 rounded-2xl gap-1 overflow-x-auto">
         {[
-          { id: 'today', label: "Today's Schedule", count: followups.filter(f => f.status === 'pending' && f.scheduled_date.slice(0, 10) === todayStr).length },
-          { id: 'overdue', label: 'Overdue Follow-ups', count: followups.filter(f => f.status === 'overdue' || (f.status === 'pending' && new Date(f.scheduled_date) < now && f.scheduled_date.slice(0, 10) !== todayStr)).length },
-          { id: 'upcoming', label: 'Upcoming Touchpoints', count: followups.filter(f => f.status === 'pending' && new Date(f.scheduled_date) > now).length },
+          { id: 'today', label: "Today's Schedule", count: followups.filter(f => f.status === 'pending' && formatISTDate(f.scheduled_date) === todayIST).length },
+          { id: 'overdue', label: 'Overdue Follow-ups', count: followups.filter(f => f.status === 'overdue' || (f.status === 'pending' && (parseToISTDate(f.scheduled_date) ? parseToISTDate(f.scheduled_date)! < now : false) && formatISTDate(f.scheduled_date) !== todayIST)).length },
+          { id: 'upcoming', label: 'Upcoming Touchpoints', count: followups.filter(f => f.status === 'pending' && (parseToISTDate(f.scheduled_date) ? parseToISTDate(f.scheduled_date)! > now : false) && formatISTDate(f.scheduled_date) !== todayIST).length },
           { id: 'completed', label: 'Completed', count: followups.filter(f => f.status === 'completed').length },
           { id: 'all', label: 'All Tasks', count: followups.length }
         ].map(t => (
@@ -201,13 +203,7 @@ export const FollowUpList: React.FC<FollowUpListProps> = ({
                     <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-400 flex-wrap">
                       <span className="flex items-center gap-1 text-slate-300">
                         <CalendarIcon className="w-3.5 h-3.5 text-amber-400" />
-                        {new Date(item.scheduled_date).toLocaleString([], {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                        {formatISTDateTime(item.scheduled_date)}
                       </span>
                       <span>•</span>
                       <span>Assigned to: <strong className="text-slate-200">{item.assigned_to_name || 'Sales Rep'}</strong></span>

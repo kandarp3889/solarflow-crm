@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { X, Plus, Calendar, ClipboardCheck, FileSpreadsheet, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Plus, Calendar, ClipboardCheck, FileSpreadsheet, Check, Layers } from 'lucide-react';
 import { api } from '../../services/api';
 import { AddLeadModal } from '../leads/AddLeadModal';
 import { getISTNowString, toISTIsoString } from '../../utils/date';
+import { SolarSystem } from '../../types';
 
 interface QuickActionsModalProps {
   isOpen: boolean;
@@ -37,15 +38,59 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
     recommended_system_size: 3.3
   });
 
+  // Systems state for quotation
+  const [availableSystems, setAvailableSystems] = useState<SolarSystem[]>([]);
+  const [selectedSystemId, setSelectedSystemId] = useState<number | undefined>(undefined);
+  const [selectedSystem, setSelectedSystem] = useState<SolarSystem | null>(null);
+
   // Quotation Form State
-  const [quoteForm, setQuoteForm] = useState({
+  const [quoteForm, setQuoteForm] = useState<{
+    lead_id: number;
+    system_id?: number;
+    system_size_kw: number;
+    panel_brand: string;
+    inverter_brand: string;
+    installation_cost: number;
+    discount: number;
+  }>({
     lead_id: 1,
+    system_id: undefined,
     system_size_kw: 3.3,
     panel_brand: 'Adani Solar',
     inverter_brand: 'Sungrow',
     installation_cost: 22000,
     discount: 5000
   });
+
+  useEffect(() => {
+    if (isOpen && actionType === 'quotation') {
+      api.getSolarSystems().then((data) => {
+        setAvailableSystems(data || []);
+      }).catch(err => console.error('Failed to load systems for quote modal:', err));
+    }
+  }, [isOpen, actionType]);
+
+  const handleSelectSystem = (idStr: string) => {
+    if (!idStr) {
+      setSelectedSystemId(undefined);
+      setSelectedSystem(null);
+      setQuoteForm(prev => ({ ...prev, system_id: undefined }));
+      return;
+    }
+    const id = parseInt(idStr, 10);
+    const sys = availableSystems.find(s => s.id === id);
+    if (sys) {
+      setSelectedSystemId(id);
+      setSelectedSystem(sys);
+      setQuoteForm(prev => ({
+        ...prev,
+        system_id: sys.id,
+        system_size_kw: sys.capacity_kw,
+        panel_brand: sys.solar_panel_name,
+        inverter_brand: sys.inverter_name
+      }));
+    }
+  };
 
   if (!isOpen || !actionType) return null;
 
@@ -268,6 +313,40 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
           {/* Action 4: Create Quotation */}
           {actionType === 'quotation' && (
             <form onSubmit={handleCreateQuotation} className="space-y-4">
+              {/* Configured Solar System Preset Selector */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Select Configured System (Package)</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400">Optional preset</span>
+                </label>
+                <select
+                  value={selectedSystemId || ''}
+                  onChange={(e) => handleSelectSystem(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-amber-500"
+                >
+                  <option value="">-- Custom Configuration (No Package) --</option>
+                  {availableSystems.map((sys) => (
+                    <option key={sys.id} value={sys.id}>
+                      {sys.system_name} ({sys.capacity_kw} kW) — ₹{sys.base_price.toLocaleString('en-IN')} | Subsidy: ₹{sys.subsidy.toLocaleString('en-IN')}
+                    </option>
+                  ))}
+                </select>
+                {selectedSystem && (
+                  <div className="mt-2 p-2.5 rounded-xl bg-slate-800/60 border border-emerald-500/20 text-[11px] text-slate-300 space-y-1">
+                    <div className="flex justify-between font-semibold text-emerald-400">
+                      <span>{selectedSystem.system_name}</span>
+                      <span>₹{selectedSystem.base_price.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="text-slate-400 text-[10px]">
+                      Panel: {selectedSystem.solar_panel_name} • Inverter: {selectedSystem.inverter_name} • Subsidy: ₹{selectedSystem.subsidy.toLocaleString('en-IN')}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-slate-300 block mb-1">Lead ID *</label>

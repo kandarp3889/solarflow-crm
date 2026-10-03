@@ -66,6 +66,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "pipeline:view", "pipeline:move", "pipeline:close_deals", "pipeline:manage_stages",
         "loans:view", "loans:manage", "loans:upload_docs", "loans:delete_docs",
         "surveys:view", "surveys:create", "surveys:complete", "surveys:delete",
+        "systems:view", "systems:create", "systems:edit", "systems:delete",
         "quotations:view", "quotations:create", "quotations:discount", "quotations:delete",
         "followups:view", "followups:manage",
         "reports:view", "reports:export",
@@ -79,6 +80,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "pipeline:view", "pipeline:move", "pipeline:close_deals", "pipeline:manage_stages",
         "loans:view", "loans:manage", "loans:upload_docs",
         "surveys:view", "surveys:create",
+        "systems:view", "systems:create", "systems:edit", "systems:delete",
         "quotations:view", "quotations:create", "quotations:discount",
         "followups:view", "followups:manage",
         "reports:view", "reports:export",
@@ -90,6 +92,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "leads:view", "leads:create", "leads:edit",
         "pipeline:view", "pipeline:move",
         "loans:view", "loans:manage", "loans:upload_docs",
+        "systems:view", "systems:create",
         "quotations:view", "quotations:create",
         "followups:view", "followups:manage",
         "ai:use"
@@ -150,6 +153,7 @@ class Company(Base):
     leads = relationship("Lead", back_populates="company", cascade="all, delete-orphan")
     quotations = relationship("Quotation", back_populates="company", cascade="all, delete-orphan")
     surveys = relationship("Survey", back_populates="company", cascade="all, delete-orphan")
+    solar_systems = relationship("SolarSystem", back_populates="company", cascade="all, delete-orphan")
     pipeline_stages = relationship("PipelineStage", back_populates="company", cascade="all, delete-orphan", order_by="PipelineStage.order_index")
     loan_processes = relationship("LoanProcess", back_populates="company", cascade="all, delete-orphan")
 
@@ -319,6 +323,34 @@ class Survey(Base):
     company = relationship("Company", back_populates="surveys")
 
 # -------------------------------------------------------------
+# Configured Solar System Products (Catalog)
+# -------------------------------------------------------------
+class SolarSystem(Base):
+    __tablename__ = "solar_systems"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    system_name = Column(String(150), nullable=False, index=True) # System Name / Brand (e.g. TATA, Adani, etc.)
+    base_price = Column(Float, nullable=False, default=0.0)       # Base price (₹)
+    capacity_kw = Column(Float, nullable=False, default=3.0)      # System Capacity (kW) decimal values e.g. 1.9, 3.3, 3.6, 5
+    solar_panel_name = Column(String(150), nullable=False)        # Solar Panel Name (Brand and Model)
+    inverter_name = Column(String(150), nullable=False)           # Inverter Name (Brand and Model)
+    structure_name = Column(String(150), nullable=False)          # Structure Name or type
+    bos_name = Column(String(150), nullable=False)                # BOS Name (Balance of System kit description)
+    quantity = Column(Integer, nullable=False, default=1)         # Quantity (Qty available / applicable)
+    warranty = Column(String(250), nullable=False, default="25 Years Panels, 5 Years Inverter, 10 Years Structure")
+    subsidy = Column(Float, nullable=False, default=0.0)          # Applicable Central / State subsidy (₹)
+    description = Column(Text, nullable=True)                     # Package details / notes
+    is_active = Column(Boolean, default=True)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=now_ist)
+    updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
+
+    company = relationship("Company", back_populates="solar_systems")
+    created_by = relationship("User")
+    quotations = relationship("Quotation", back_populates="solar_system")
+
+# -------------------------------------------------------------
 # Solar Quotation
 # -------------------------------------------------------------
 class Quotation(Base):
@@ -327,18 +359,25 @@ class Quotation(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     lead_id = Column(Integer, ForeignKey("leads.id"), nullable=False, index=True)
+    system_id = Column(Integer, ForeignKey("solar_systems.id", ondelete="SET NULL"), nullable=True, index=True)
     quotation_number = Column(String(50), index=True, nullable=False) # e.g. QT-2026-001
     status = Column(String(50), default=QuotationStatus.DRAFT.value, index=True)
     
-    # Solar Hardware Specifications
+    # Solar Hardware Specifications & Snapshot
+    system_name = Column(String(150), nullable=True)
     system_size_kw = Column(Float, nullable=False, default=5.0)
+    solar_panel_name = Column(String(150), nullable=True)
     panel_brand = Column(String(100), default="Tata Power Solar")
     panel_wattage = Column(Integer, default=550) # Wp
     panel_quantity = Column(Integer, default=10)
+    inverter_name = Column(String(150), nullable=True)
     inverter_brand = Column(String(100), default="Sungrow")
     inverter_capacity = Column(String(100), default="5 kW On-Grid")
     battery_backup = Column(String(100), default="None")
+    structure_name = Column(String(150), nullable=True)
     structure_type = Column(String(100), default="Elevated Galvanized Iron")
+    bos_name = Column(String(150), nullable=True)
+    warranty = Column(String(250), nullable=True)
 
     # Financial Breakdown Formula:
     # (Base System Price + Installation + Other - Discount) + GST - Subsidy = Final Price
@@ -364,6 +403,7 @@ class Quotation(Base):
     updated_at = Column(DateTime, default=now_ist, onupdate=now_ist)
 
     lead = relationship("Lead", back_populates="quotations")
+    solar_system = relationship("SolarSystem", back_populates="quotations")
     created_by = relationship("User")
     company = relationship("Company", back_populates="quotations")
 

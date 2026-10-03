@@ -381,21 +381,50 @@ export interface Survey {
 
 export type QuotationStatus = 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired';
 
+export interface SolarSystem {
+  id: number;
+  company_id: number;
+  system_name: string;
+  base_price: number;
+  capacity_kw: number;
+  solar_panel_name: string;
+  inverter_name: string;
+  structure_name: string;
+  bos_name: string;
+  quantity: number;
+  warranty: string;
+  subsidy: number;
+  description?: string;
+  is_active: boolean;
+  created_by_id?: number;
+  created_by_name?: string;
+  quotations_count?: number;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface Quotation {
   id: number;
   company_id: number;
   lead_id: number;
+  system_id?: number;
+  system_name?: string;
   quotation_number: string;
   status: QuotationStatus;
 
   system_size_kw: number;
+  solar_panel_name?: string;
   panel_brand: string;
   panel_wattage: number;
   panel_quantity: number;
+  inverter_name?: string;
   inverter_brand: string;
   inverter_capacity: string;
   battery_backup: string;
+  structure_name?: string;
   structure_type: string;
+  bos_name?: string;
+  warranty?: string;
 
   system_price: number;
   installation_cost: number;

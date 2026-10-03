@@ -469,6 +469,88 @@ class SurveyResponse(SurveyBase):
         from_attributes = True
 
 # -------------------------------------------------------------
+# Solar System Catalog Schemas
+# -------------------------------------------------------------
+class SolarSystemBase(BaseModel):
+    system_name: str
+    base_price: float
+    capacity_kw: float
+    solar_panel_name: str
+    inverter_name: str
+    structure_name: str
+    bos_name: str
+    quantity: int = 1
+    warranty: str = "25 Years Panels, 5 Years Inverter, 10 Years Structure"
+    subsidy: float = 0.0
+    description: Optional[str] = None
+    is_active: bool = True
+
+    @field_validator("base_price", "subsidy")
+    def validate_non_negative_price(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("Amount cannot be negative")
+        return v
+
+    @field_validator("capacity_kw")
+    def validate_positive_capacity(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("System capacity must be greater than 0 kW")
+        return v
+
+    @field_validator("quantity")
+    def validate_non_negative_qty(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("Quantity cannot be negative")
+        return v
+
+class SolarSystemCreate(SolarSystemBase):
+    pass
+
+class SolarSystemUpdate(BaseModel):
+    system_name: Optional[str] = None
+    base_price: Optional[float] = None
+    capacity_kw: Optional[float] = None
+    solar_panel_name: Optional[str] = None
+    inverter_name: Optional[str] = None
+    structure_name: Optional[str] = None
+    bos_name: Optional[str] = None
+    quantity: Optional[int] = None
+    warranty: Optional[str] = None
+    subsidy: Optional[float] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+    @field_validator("base_price", "subsidy")
+    def validate_non_negative_price(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("Amount cannot be negative")
+        return v
+
+    @field_validator("capacity_kw")
+    def validate_positive_capacity(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("System capacity must be greater than 0 kW")
+        return v
+
+    @field_validator("quantity")
+    def validate_non_negative_qty(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("Quantity cannot be negative")
+        return v
+
+class SolarSystemResponse(SolarSystemBase):
+    id: int
+    company_id: int
+    created_by_id: Optional[int] = None
+    created_by_name: Optional[str] = None
+    quotations_count: Optional[int] = 0
+    created_at: ISTDateTime
+    updated_at: Optional[ISTDateTime] = None
+
+    class Config:
+        from_attributes = True
+
+# -------------------------------------------------------------
 # Solar Quotation Schemas
 # -------------------------------------------------------------
 class QuotationCalculateRequest(BaseModel):
@@ -502,14 +584,21 @@ class QuotationCalculateResponse(BaseModel):
 
 class QuotationBase(BaseModel):
     lead_id: int
+    system_id: Optional[int] = None
+    system_name: Optional[str] = None
     system_size_kw: float = 5.0
+    solar_panel_name: Optional[str] = None
     panel_brand: str = "Tata Power Solar"
     panel_wattage: int = 550
     panel_quantity: int = 10
+    inverter_name: Optional[str] = None
     inverter_brand: str = "Sungrow"
     inverter_capacity: str = "5 kW On-Grid"
     battery_backup: str = "None"
+    structure_name: Optional[str] = None
     structure_type: str = "Elevated Galvanized Iron"
+    bos_name: Optional[str] = None
+    warranty: Optional[str] = None
 
     system_price: float = 240000.0
     installation_cost: float = 25000.0
@@ -533,14 +622,21 @@ class QuotationCreate(QuotationBase):
     pass
 
 class QuotationUpdate(BaseModel):
+    system_id: Optional[int] = None
+    system_name: Optional[str] = None
     system_size_kw: Optional[float] = None
+    solar_panel_name: Optional[str] = None
     panel_brand: Optional[str] = None
     panel_wattage: Optional[int] = None
     panel_quantity: Optional[int] = None
+    inverter_name: Optional[str] = None
     inverter_brand: Optional[str] = None
     inverter_capacity: Optional[str] = None
     battery_backup: Optional[str] = None
+    structure_name: Optional[str] = None
     structure_type: Optional[str] = None
+    bos_name: Optional[str] = None
+    warranty: Optional[str] = None
     system_price: Optional[float] = None
     installation_cost: Optional[float] = None
     other_costs: Optional[float] = None

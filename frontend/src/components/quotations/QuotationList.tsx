@@ -12,25 +12,30 @@ import {
   ShieldCheck,
   TrendingUp,
   Percent,
+  Layers,
   X
 } from 'lucide-react';
 import { Quotation } from '../../types';
 import { api } from '../../services/api';
 import { formatISTDate } from '../../utils/date';
+import { CreateQuotationModal } from './CreateQuotationModal';
 
 interface QuotationListProps {
   onSelectLead: (id: number) => void;
   onOpenQuickAction: (action: 'lead' | 'followup' | 'survey' | 'quotation') => void;
+  onNavigateToSystems?: () => void;
 }
 
 export const QuotationList: React.FC<QuotationListProps> = ({
   onSelectLead,
-  onOpenQuickAction
+  onOpenQuickAction,
+  onNavigateToSystems
 }) => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeQuote, setActiveQuote] = useState<Quotation | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isCreateQuoteModalOpen, setIsCreateQuoteModalOpen] = useState(false);
 
   const fetchQuotes = async () => {
     setLoading(true);
@@ -106,13 +111,26 @@ export const QuotationList: React.FC<QuotationListProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={() => onOpenQuickAction('quotation')}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20 self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Create Solar Quotation</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          {onNavigateToSystems && (
+            <button
+              onClick={onNavigateToSystems}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+              title="Manage configured solar packages & component pricing"
+            >
+              <Layers className="w-3.5 h-3.5 text-amber-400" />
+              <span>Add / Manage Systems</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setIsCreateQuoteModalOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Create Solar Quotation</span>
+          </button>
+        </div>
       </div>
 
       {/* Quotations Grid */}
@@ -154,11 +172,24 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <Sun className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="font-semibold text-slate-200">{q.system_size_kw} kW System</span>
-                    <span>•</span>
-                    <span className="truncate">{q.panel_brand}</span>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap">
+                      <Sun className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="font-semibold text-slate-200">{q.system_size_kw} kW System</span>
+                      {q.system_name && (
+                        <>
+                          <span>•</span>
+                          <span className="text-amber-400 font-medium truncate max-w-[150px]" title={q.system_name}>{q.system_name}</span>
+                        </>
+                      )}
+                      <span>•</span>
+                      <span className="truncate">{q.solar_panel_name || q.panel_brand}</span>
+                    </div>
+                    {q.structure_name && (
+                      <p className="text-[10px] text-slate-400 truncate">
+                        Structure: <span className="text-slate-300">{q.structure_name}</span> {q.inverter_name ? `• ${q.inverter_name}` : ''}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -310,7 +341,10 @@ export const QuotationList: React.FC<QuotationListProps> = ({
               <div className="text-right">
                 <span className="font-bold text-slate-500 uppercase text-[10px] block">System Capacity:</span>
                 <p className="text-xl font-black text-[#106828] mt-1">{activeQuote.system_size_kw} kW On-Grid</p>
-                <p className="text-slate-600">Structure: {activeQuote.structure_type}</p>
+                {activeQuote.system_name && (
+                  <p className="text-xs font-semibold text-slate-800">{activeQuote.system_name}</p>
+                )}
+                <p className="text-slate-600">Structure: {activeQuote.structure_name || activeQuote.structure_type}</p>
               </div>
             </div>
 
@@ -331,25 +365,25 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                 <tbody className="divide-y text-slate-800">
                   <tr>
                     <td className="p-2.5 font-bold">Solar PV Modules</td>
-                    <td className="p-2.5">{activeQuote.panel_brand} ({activeQuote.panel_wattage}W Mono PERC DCR)</td>
+                    <td className="p-2.5">{activeQuote.solar_panel_name || `${activeQuote.panel_brand} (${activeQuote.panel_wattage}W Mono PERC DCR)`}</td>
                     <td className="p-2.5 text-center">{activeQuote.panel_quantity} Units</td>
                     <td className="p-2.5 text-right font-semibold text-emerald-700">25 Years</td>
                   </tr>
                   <tr>
                     <td className="p-2.5 font-bold">Grid Inverter</td>
-                    <td className="p-2.5">{activeQuote.inverter_brand} ({activeQuote.inverter_capacity})</td>
+                    <td className="p-2.5">{activeQuote.inverter_name || `${activeQuote.inverter_brand} (${activeQuote.inverter_capacity})`}</td>
                     <td className="p-2.5 text-center">1 Unit</td>
                     <td className="p-2.5 text-right font-semibold text-emerald-700">10 Years</td>
                   </tr>
                   <tr>
                     <td className="p-2.5 font-bold">Mounting Structure</td>
-                    <td className="p-2.5">{activeQuote.structure_type}</td>
+                    <td className="p-2.5">{activeQuote.structure_name || activeQuote.structure_type}</td>
                     <td className="p-2.5 text-center">Complete Set</td>
-                    <td className="p-2.5 text-right font-semibold text-emerald-700">15 Years</td>
+                    <td className="p-2.5 text-right font-semibold text-emerald-700">10-15 Years</td>
                   </tr>
                   <tr>
                     <td className="p-2.5 font-bold">Balance of System (BOS)</td>
-                    <td className="p-2.5">ACDB, DCDB, Dual Copper Earthing & Lightning Arrestor</td>
+                    <td className="p-2.5">{activeQuote.bos_name || "ACDB, DCDB, Dual Copper Earthing & Lightning Arrestor"}</td>
                     <td className="p-2.5 text-center">Complete Set</td>
                     <td className="p-2.5 text-right font-semibold text-emerald-700">5 Years Comprehensive</td>
                   </tr>
@@ -396,6 +430,17 @@ export const QuotationList: React.FC<QuotationListProps> = ({
           </div>
         </div>
       )}
+
+      {/* Create Solar Quotation Modal */}
+      <CreateQuotationModal
+        isOpen={isCreateQuoteModalOpen}
+        onClose={() => setIsCreateQuoteModalOpen(false)}
+        onSuccess={() => {
+          fetchQuotes();
+          window.dispatchEvent(new CustomEvent('crm-data-updated'));
+        }}
+        onNavigateToSystems={onNavigateToSystems}
+      />
     </div>
   );
 };

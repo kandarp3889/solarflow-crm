@@ -321,6 +321,42 @@ class ApiClient {
     });
   }
 
+  // Solar Systems Catalog
+  async getSolarSystems(params: Record<string, any> = {}) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        query.append(key, String(val));
+      }
+    });
+    const qStr = query.toString();
+    return this.request(`/solar-systems${qStr ? '?' + qStr : ''}`);
+  }
+
+  async getSolarSystem(id: number) {
+    return this.request(`/solar-systems/${id}`);
+  }
+
+  async createSolarSystem(data: any) {
+    return this.request('/solar-systems', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateSolarSystem(id: number, data: any) {
+    return this.request(`/solar-systems/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteSolarSystem(id: number) {
+    return this.request(`/solar-systems/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
   // Team & User Management
   async getTeam(params: Record<string, any> = {}) {
     const query = new URLSearchParams();

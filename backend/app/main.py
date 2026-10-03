@@ -6,6 +6,7 @@ import os
 
 from app.config import settings
 from app.database import engine, Base
+from app.core.timezone import now_ist
 # Import all models to ensure metadata registers all tables
 from app.models import *
 
@@ -26,6 +27,7 @@ from app.api.settings import router as settings_router
 from app.api.notifications import router as notifications_router
 from app.api.audit_logs import router as audit_logs_router
 from app.api.loan_process import router as loan_process_router
+from app.api.solar_systems import router as solar_systems_router
 
 # Create database tables automatically
 Base.metadata.create_all(bind=engine)
@@ -38,6 +40,13 @@ def ensure_schema_compatibility():
                 conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_permissions JSON DEFAULT '[]'::json;"))
                 conn.execute(text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS custom_roles JSON DEFAULT '[]'::json;"))
                 conn.execute(text("ALTER TABLE loan_processes ADD COLUMN IF NOT EXISTS inverter_serial_number VARCHAR(100);"))
+                conn.execute(text("ALTER TABLE quotations ADD COLUMN IF NOT EXISTS system_id INTEGER;"))
+                conn.execute(text("ALTER TABLE quotations ADD COLUMN IF NOT EXISTS system_name VARCHAR(150);"))
+                conn.execute(text("ALTER TABLE quotations ADD COLUMN IF NOT EXISTS solar_panel_name VARCHAR(150);"))
+                conn.execute(text("ALTER TABLE quotations ADD COLUMN IF NOT EXISTS inverter_name VARCHAR(150);"))
+                conn.execute(text("ALTER TABLE quotations ADD COLUMN IF NOT EXISTS structure_name VARCHAR(150);"))
+                conn.execute(text("ALTER TABLE quotations ADD COLUMN IF NOT EXISTS bos_name VARCHAR(150);"))
+                conn.execute(text("ALTER TABLE quotations ADD COLUMN IF NOT EXISTS warranty VARCHAR(250);"))
 
                 cols_to_drop = [
                     "consumer_number", "roof_ownership", "roof_type", "lead_score", "score_category", "estimated_value",
@@ -64,6 +73,22 @@ def ensure_schema_compatibility():
                 lp_cols = [row[1] for row in lp_result]
                 if "inverter_serial_number" not in lp_cols:
                     conn.execute(text("ALTER TABLE loan_processes ADD COLUMN inverter_serial_number VARCHAR(100)"))
+                
+                # Quotations table column upgrades
+                q_result = conn.execute(text("PRAGMA table_info(quotations)")).fetchall()
+                q_cols = [row[1] for row in q_result]
+                for q_col_name, q_col_type in [
+                    ("system_id", "INTEGER"),
+                    ("system_name", "VARCHAR(150)"),
+                    ("solar_panel_name", "VARCHAR(150)"),
+                    ("inverter_name", "VARCHAR(150)"),
+                    ("structure_name", "VARCHAR(150)"),
+                    ("bos_name", "VARCHAR(150)"),
+                    ("warranty", "VARCHAR(250)")
+                ]:
+                    if q_col_name not in q_cols:
+                        conn.execute(text(f"ALTER TABLE quotations ADD COLUMN {q_col_name} {q_col_type}"))
+
                 lead_result = conn.execute(text("PRAGMA table_info(leads)")).fetchall()
                 lead_cols = [row[1] for row in lead_result]
                 cols_to_drop = [
@@ -158,9 +183,81 @@ def ensure_existing_won_leads_have_loan_processes():
     except Exception as e:
         print(f"[!] Won leads loan initialization notice: {e}")
 
+def ensure_default_solar_systems():
+    try:
+        from app.database import SessionLocal
+        from app.models.models import Company, SolarSystem
+        db = SessionLocal()
+        companies = db.query(Company).all()
+        for comp in companies:
+            count = db.query(SolarSystem).filter(SolarSystem.company_id == comp.id).count()
+            if count == 0:
+                defaults = [
+                    {
+                        "system_name": "Tata Power Solar 3.3 kW Package",
+                        "base_price": 157400.0,
+                        "capacity_kw": 3.3,
+                        "solar_panel_name": "Tata Power 550W Mono PERC",
+                        "inverter_name": "Growatt 3.3 kW On-Grid Inverter",
+                        "structure_name": "Elevated Galvanized Iron (GI)",
+                        "bos_name": "TrueSun Standard BOS Kit (DCDB/ACDB, DC Cables, Earthing)",
+                        "quantity": 15,
+                        "warranty": "25 Years Panels, 5 Years Inverter, 10 Years Structure",
+                        "subsidy": 78000.0,
+                        "description": "Popular residential package under PM Surya Ghar Muft Bijli Yojana."
+                    },
+                    {
+                        "system_name": "Adani Solar 5.0 kW TOPCon Bifacial",
+                        "base_price": 240000.0,
+                        "capacity_kw": 5.0,
+                        "solar_panel_name": "Adani Solar 550W TOPCon Bifacial",
+                        "inverter_name": "Sungrow 5 kW String Inverter",
+                        "structure_name": "Hot-Dip Galvanized Dual-Pole Superstructure",
+                        "bos_name": "TrueSun Heavy-Duty Industrial BOS Kit",
+                        "quantity": 10,
+                        "warranty": "25 Years Panels, 7 Years Inverter, 10 Years Structure",
+                        "subsidy": 78000.0,
+                        "description": "High-efficiency bifacial solar system designed for medium-to-large bungalows and villas."
+                    },
+                    {
+                        "system_name": "Waaree 1.9 kW Compact Rooftop",
+                        "base_price": 95000.0,
+                        "capacity_kw": 1.9,
+                        "solar_panel_name": "Waaree 540W Mono PERC",
+                        "inverter_name": "GoodWe 2 kW Single Phase",
+                        "structure_name": "Standard Rooftop Flush Mount Structure",
+                        "bos_name": "Compact Rooftop Protection BOS Kit",
+                        "quantity": 20,
+                        "warranty": "25 Years Panels, 5 Years Inverter, 5 Years Structure",
+                        "subsidy": 30000.0,
+                        "description": "Economical rooftop solar kit tailored for monthly bills between ₹1,500 and ₹2,500."
+                    },
+                    {
+                        "system_name": "Goldi Solar 3.6 kW Residential Pro",
+                        "base_price": 172000.0,
+                        "capacity_kw": 3.6,
+                        "solar_panel_name": "Goldi 550W Mono PERC Half-Cut",
+                        "inverter_name": "Solis 4 kW Dual MPPT Inverter",
+                        "structure_name": "Elevated Aluminum Super Structure",
+                        "bos_name": "Complete Heavy-Duty IP65 BOS Protection Kit",
+                        "quantity": 8,
+                        "warranty": "25 Years Panels, 5 Years Inverter, 10 Years Structure",
+                        "subsidy": 78000.0,
+                        "description": "Optimized for maximum generation in high-temperature Western Indian regions."
+                    }
+                ]
+                for d in defaults:
+                    db.add(SolarSystem(company_id=comp.id, **d, created_at=now_ist(), updated_at=now_ist()))
+                db.commit()
+                print(f"[*] Initialized {len(defaults)} default solar systems for company '{comp.name}'.")
+        db.close()
+    except Exception as e:
+        print(f"[!] Default solar systems initialization notice: {e}")
+
 auto_seed_if_empty()
 ensure_default_pipeline_stages()
 ensure_existing_won_leads_have_loan_processes()
+ensure_default_solar_systems()
 
 app = FastAPI(
     title="SolarFlow CRM SaaS API",
@@ -226,6 +323,7 @@ app.include_router(settings_router, prefix=settings.API_V1_STR)
 app.include_router(notifications_router, prefix=settings.API_V1_STR)
 app.include_router(audit_logs_router, prefix=settings.API_V1_STR)
 app.include_router(loan_process_router, prefix=settings.API_V1_STR)
+app.include_router(solar_systems_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():

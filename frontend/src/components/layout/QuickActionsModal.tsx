@@ -48,6 +48,7 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
     lead_id: number;
     system_id?: number;
     system_size_kw: number;
+    panel_quantity?: number;
     panel_brand: string;
     inverter_brand: string;
     installation_cost: number;
@@ -56,11 +57,13 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
     lead_id: 1,
     system_id: undefined,
     system_size_kw: 3.3,
+    panel_quantity: 6,
     panel_brand: 'Adani Solar',
     inverter_brand: 'Sungrow',
     installation_cost: 0,
     discount: 0
   });
+  const [isManualUnitsQuick, setIsManualUnitsQuick] = useState(false);
 
   useEffect(() => {
     if (isOpen && actionType === 'quotation') {
@@ -82,10 +85,12 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
     if (sys) {
       setSelectedSystemId(id);
       setSelectedSystem(sys);
+      const autoUnits = Math.ceil((sys.capacity_kw * 1000) / 550);
       setQuoteForm(prev => ({
         ...prev,
         system_id: sys.id,
         system_size_kw: sys.capacity_kw,
+        panel_quantity: isManualUnitsQuick && prev.panel_quantity ? prev.panel_quantity : autoUnits,
         panel_brand: sys.solar_panel_name,
         inverter_brand: sys.inverter_name
       }));
@@ -366,7 +371,15 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
                     min="0.1"
                     required
                     value={quoteForm.system_size_kw}
-                    onChange={(e) => setQuoteForm({ ...quoteForm, system_size_kw: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      const newKw = parseFloat(e.target.value) || 0;
+                      const autoQ = Math.ceil((Math.max(0.1, newKw) * 1000) / 550);
+                      setQuoteForm(prev => ({
+                        ...prev,
+                        system_size_kw: newKw,
+                        panel_quantity: isManualUnitsQuick && prev.panel_quantity ? prev.panel_quantity : autoQ
+                      }));
+                    }}
                     className="w-full px-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-amber-500"
                   />
                 </div>
@@ -387,18 +400,56 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Inverter Brand</label>
-                  <select
-                    value={quoteForm.inverter_brand}
-                    onChange={(e) => setQuoteForm({ ...quoteForm, inverter_brand: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="Sungrow">Sungrow (Grid-Tied)</option>
-                    <option value="Growatt">Growatt High Yield</option>
-                    <option value="Enphase">Enphase Microinverter</option>
-                    <option value="Fronius">Fronius Primo</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-300">PV Modules (Units)</label>
+                    {isManualUnitsQuick ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsManualUnitsQuick(false);
+                          const autoQ = Math.ceil((Math.max(0.1, quoteForm.system_size_kw) * 1000) / 550);
+                          setQuoteForm(prev => ({ ...prev, panel_quantity: autoQ }));
+                        }}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                        title="Reset to automatic calculation"
+                      >
+                        Reset Auto ({Math.ceil((Math.max(0.1, quoteForm.system_size_kw) * 1000) / 550)})
+                      </button>
+                    ) : (
+                      <span className="text-[10px] text-emerald-400 font-mono">⚡ Auto</span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      max="999"
+                      value={quoteForm.panel_quantity || Math.ceil((Math.max(0.1, quoteForm.system_size_kw) * 1000) / 550)}
+                      onChange={(e) => {
+                        setIsManualUnitsQuick(true);
+                        setQuoteForm({ ...quoteForm, panel_quantity: parseInt(e.target.value, 10) || 1 });
+                      }}
+                      className="w-full px-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-amber-500 font-semibold pr-12"
+                    />
+                    <span className="absolute right-3 top-2 text-xs text-slate-400 font-medium pointer-events-none">
+                      Units
+                    </span>
+                  </div>
                 </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Inverter Brand</label>
+                <select
+                  value={quoteForm.inverter_brand}
+                  onChange={(e) => setQuoteForm({ ...quoteForm, inverter_brand: e.target.value })}
+                  className="w-full px-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-amber-500"
+                >
+                  <option value="Sungrow">Sungrow (Grid-Tied)</option>
+                  <option value="Growatt">Growatt High Yield</option>
+                  <option value="Enphase">Enphase Microinverter</option>
+                  <option value="Fronius">Fronius Primo</option>
+                </select>
               </div>
 
               <div className="pt-3 flex justify-end gap-3 border-t border-slate-800">

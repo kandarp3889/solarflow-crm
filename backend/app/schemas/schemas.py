@@ -557,6 +557,7 @@ class QuotationCalculateRequest(BaseModel):
     system_size_kw: float
     panel_cost_per_watt: Optional[float] = 28.0
     panel_wattage: Optional[int] = 550
+    panel_quantity: Optional[int] = None
     inverter_cost: Optional[float] = 45000.0
     battery_cost: Optional[float] = 0.0
     structure_cost: Optional[float] = 20000.0
@@ -590,7 +591,7 @@ class QuotationBase(BaseModel):
     solar_panel_name: Optional[str] = None
     panel_brand: str = "Tata Power Solar"
     panel_wattage: int = 550
-    panel_quantity: int = 10
+    panel_quantity: Optional[int] = None
     inverter_name: Optional[str] = None
     inverter_brand: str = "Sungrow"
     inverter_capacity: str = "5 kW On-Grid"

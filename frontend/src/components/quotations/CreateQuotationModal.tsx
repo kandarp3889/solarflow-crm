@@ -34,10 +34,23 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   const [systemName, setSystemName] = useState('');
   const [systemSizeKw, setSystemSizeKw] = useState('3.3');
   const [panelName, setPanelName] = useState('Tata Power Solar (550W Mono PERC)');
+  const [panelQuantity, setPanelQuantity] = useState('6');
+  const [isManualUnits, setIsManualUnits] = useState(false);
   const [inverterName, setInverterName] = useState('Growatt High Yield');
   const [structureName, setStructureName] = useState('Elevated Galvanized Iron');
   const [bosName, setBosName] = useState('Standard BOS Kit (ACDB/DCDB, Cables, Earthing)');
   const [warranty, setWarranty] = useState('25 Years Panels, 8-10 Years Inverter');
+
+  // Helper to extract wattage and auto calculate panel units
+  const getWattageFromPanel = (name: string): number => {
+    const match = name.match(/(\d{3,4})\s*w/i);
+    return match ? parseInt(match[1], 10) : 550;
+  };
+
+  const calculateAutoUnits = (kwVal: number, panelStr: string): number => {
+    const w = getWattageFromPanel(panelStr);
+    return Math.ceil((Math.max(0.1, kwVal) * 1000) / (w || 550));
+  };
 
   // Financial components
   const [basePrice, setBasePrice] = useState('157400');
@@ -66,6 +79,9 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
             }
           } else if (systemsData && systemsData.length > 0) {
             applySystemData(systemsData[0]);
+          } else {
+            const kwInit = parseFloat(systemSizeKw) || 3.3;
+            setPanelQuantity(calculateAutoUnits(kwInit, panelName).toString());
           }
         })
         .catch((err) => {
@@ -80,14 +96,22 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   const applySystemData = (sys: SolarSystem) => {
     setSelectedSystemId(sys.id);
     setSystemName(sys.system_name || '');
-    setSystemSizeKw(sys.capacity_kw ? sys.capacity_kw.toString() : '3.3');
-    setPanelName(sys.solar_panel_name || '');
+    const newKwStr = sys.capacity_kw ? sys.capacity_kw.toString() : '3.3';
+    setSystemSizeKw(newKwStr);
+    const newPanel = sys.solar_panel_name || '';
+    setPanelName(newPanel);
     setInverterName(sys.inverter_name || '');
     setStructureName(sys.structure_name || 'Elevated Galvanized Iron');
     setBosName(sys.bos_name || 'Standard BOS Kit');
     setWarranty(sys.warranty || '25 Years Panels, 8-10 Years Inverter');
     setBasePrice(sys.base_price ? sys.base_price.toString() : '0');
     setSubsidyAmount(sys.subsidy !== undefined ? sys.subsidy.toString() : '0');
+
+    // Automatically calculate units for the chosen system unless the user actively entered a manual override
+    if (!isManualUnits) {
+      const autoUnits = calculateAutoUnits(parseFloat(newKwStr) || 3.3, newPanel);
+      setPanelQuantity(autoUnits.toString());
+    }
   };
 
   const handleSystemDropdownChange = (val: string) => {
@@ -100,6 +124,24 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     const found = systems.find(s => s.id === sysId);
     if (found) {
       applySystemData(found);
+    }
+  };
+
+  const handleSystemSizeChange = (val: string) => {
+    setSystemSizeKw(val);
+    const parsed = parseFloat(val);
+    if (!isManualUnits && !isNaN(parsed) && parsed > 0) {
+      setPanelQuantity(calculateAutoUnits(parsed, panelName).toString());
+    }
+  };
+
+  const handlePanelNameChange = (val: string) => {
+    setPanelName(val);
+    if (!isManualUnits) {
+      const parsedKw = parseFloat(systemSizeKw) || 0;
+      if (parsedKw > 0) {
+        setPanelQuantity(calculateAutoUnits(parsedKw, val).toString());
+      }
     }
   };
 
@@ -135,6 +177,9 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       return;
     }
 
+    const parsedQty = parseInt(panelQuantity, 10);
+    const effectiveQty = (!isNaN(parsedQty) && parsedQty > 0) ? parsedQty : calculateAutoUnits(kw, panelName);
+
     setSubmitting(true);
     try {
       const payload = {
@@ -144,6 +189,8 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         system_size_kw: kw,
         solar_panel_name: panelName.trim() || undefined,
         panel_brand: panelName.trim() || 'Tata Power Solar',
+        panel_wattage: getWattageFromPanel(panelName),
+        panel_quantity: effectiveQty,
         inverter_name: inverterName.trim() || undefined,
         inverter_brand: inverterName.trim() || 'Sungrow',
         structure_name: structureName.trim() || undefined,
@@ -300,25 +347,75 @@ export const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
                   min="0.1"
                   required
                   value={systemSizeKw}
-                  onChange={(e) => setSystemSizeKw(e.target.value)}
+                  onChange={(e) => handleSystemSizeChange(e.target.value)}
                   className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                   Solar Panel Name / Model
                 </label>
                 <input
                   type="text"
                   value={panelName}
-                  onChange={(e) => setPanelName(e.target.value)}
+                  onChange={(e) => handlePanelNameChange(e.target.value)}
                   className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
 
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
+                    <span>PV Modules (Units) *</span>
+                  </label>
+                  {isManualUnits ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsManualUnits(false);
+                        setPanelQuantity(calculateAutoUnits(kw, panelName).toString());
+                      }}
+                      className="text-[10px] text-amber-400 hover:text-amber-300 underline font-medium cursor-pointer"
+                      title="Reset to automatically calculated units"
+                    >
+                      Reset to Auto ({calculateAutoUnits(kw, panelName)})
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                      ⚡ Auto
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="999"
+                    required
+                    value={panelQuantity}
+                    onChange={(e) => {
+                      setIsManualUnits(true);
+                      setPanelQuantity(e.target.value);
+                    }}
+                    placeholder={calculateAutoUnits(kw, panelName).toString()}
+                    className="w-full px-3.5 py-2.5 text-xs text-white bg-slate-800/80 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500 transition-colors pr-14 font-semibold"
+                  />
+                  <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium pointer-events-none">
+                    Units
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  {isManualUnits
+                    ? `Manual: ${panelQuantity} units (Auto: ${calculateAutoUnits(kw, panelName)})`
+                    : `Auto: ${calculateAutoUnits(kw, panelName)} units (${kw} kW)`}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                   Inverter Name / Model

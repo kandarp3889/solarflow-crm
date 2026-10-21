@@ -1,10 +1,11 @@
 import math
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 def calculate_solar_quotation(
     system_size_kw: float,
     panel_cost_per_watt: float = 28.0,
     panel_wattage: int = 550,
+    panel_quantity: Optional[int] = None,
     inverter_cost: float = 45000.0,
     battery_cost: float = 0.0,
     structure_cost: float = 20000.0,
@@ -16,7 +17,7 @@ def calculate_solar_quotation(
 ) -> Dict[str, Any]:
     """
     Real-time Solar Quotation Formula:
-    1. Panels Needed = ceil(kW * 1000 / Panel Wattage)
+    1. Panels Needed = manual panel_quantity OR ceil(kW * 1000 / Panel Wattage)
     2. Panel Total Cost = kW * 1000 * Panel Cost per Watt
     3. Hardware Base = Panels Cost + Inverter + Battery + Structure
     4. Subtotal = Hardware Base + Installation + Other - Discount
@@ -28,7 +29,10 @@ def calculate_solar_quotation(
     """
     kw = max(0.1, float(system_size_kw))
     wattage = max(300, int(panel_wattage))
-    panel_quantity = math.ceil((kw * 1000.0) / wattage)
+    if panel_quantity is not None and panel_quantity > 0:
+        actual_panel_quantity = int(panel_quantity)
+    else:
+        actual_panel_quantity = math.ceil((kw * 1000.0) / wattage)
 
     panel_total_cost = kw * 1000.0 * float(panel_cost_per_watt)
     system_hardware_price = round(panel_total_cost + inverter_cost + battery_cost + structure_cost, 2)
@@ -59,7 +63,7 @@ def calculate_solar_quotation(
 
     return {
         "system_size_kw": kw,
-        "panel_quantity": panel_quantity,
+        "panel_quantity": actual_panel_quantity,
         "system_price": system_hardware_price,
         "installation_cost": installation_cost,
         "other_costs": other_costs,

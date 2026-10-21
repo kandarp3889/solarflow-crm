@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Percent,
   Layers,
+  Edit2,
   X
 } from 'lucide-react';
 import { Quotation, SolarSystem } from '../../types';
@@ -101,6 +102,12 @@ export const QuotationList: React.FC<QuotationListProps> = ({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isCreateQuoteModalOpen, setIsCreateQuoteModalOpen] = useState(false);
 
+  // Manual Units Editing in Proposal Modal
+  const [editingUnitsQuoteId, setEditingUnitsQuoteId] = useState<number | null>(null);
+  const [customUnitsVal, setCustomUnitsVal] = useState<string>('');
+  const [isSavingUnits, setIsSavingUnits] = useState(false);
+  const [unitsSaveSuccessMsg, setUnitsSaveSuccessMsg] = useState<string>('');
+
   const fetchQuotes = async () => {
     setLoading(true);
     try {
@@ -131,7 +138,34 @@ export const QuotationList: React.FC<QuotationListProps> = ({
 
   const handlePrintProposal = (q: Quotation) => {
     setActiveQuote(q);
+    setEditingUnitsQuoteId(null);
+    setCustomUnitsVal(q.panel_quantity ? q.panel_quantity.toString() : '10');
+    setUnitsSaveSuccessMsg('');
     setIsPrintModalOpen(true);
+  };
+
+  const handleSaveCustomUnits = async () => {
+    if (!activeQuote) return;
+    const qty = parseInt(customUnitsVal, 10);
+    if (isNaN(qty) || qty <= 0) {
+      alert('Please enter a valid positive number of module units.');
+      return;
+    }
+    setIsSavingUnits(true);
+    try {
+      await api.updateQuotation(activeQuote.id, { panel_quantity: qty });
+      const updatedQuote = { ...activeQuote, panel_quantity: qty };
+      setActiveQuote(updatedQuote);
+      setQuotations(prev => prev.map(q => q.id === activeQuote.id ? { ...q, panel_quantity: qty } : q));
+      setEditingUnitsQuoteId(null);
+      setUnitsSaveSuccessMsg(`Solar PV Modules updated to ${qty} Units!`);
+      setTimeout(() => setUnitsSaveSuccessMsg(''), 4000);
+      window.dispatchEvent(new CustomEvent('crm-data-updated'));
+    } catch (e: any) {
+      alert(e.message || 'Failed to update module units');
+    } finally {
+      setIsSavingUnits(false);
+    }
   };
 
   const handleSendDispatch = async (id: number, channel: 'email' | 'whatsapp') => {
@@ -251,6 +285,8 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                     <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap">
                       <Sun className="w-3.5 h-3.5 text-amber-400" />
                       <span className="font-semibold text-slate-200">{q.system_size_kw} kW System</span>
+                      <span>•</span>
+                      <span className="text-emerald-400 font-medium">{q.panel_quantity} Units</span>
                       {(q.system_name || linkedSys?.system_name) && (
                         <>
                           <span>•</span>
@@ -354,6 +390,7 @@ export const QuotationList: React.FC<QuotationListProps> = ({
         const structureSpec = activeQuote.structure_name || linkedSystem?.structure_name || activeQuote.structure_type;
         const bosSpec = activeQuote.bos_name || linkedSystem?.bos_name || "Standard BOS Kit (DCDB/ACDB, DC Cables, Earthing)";
         const finalPayablePrice = Math.max(0, Math.round(activeQuote.system_price - (activeQuote.subsidy_amount || 0)));
+        const autoPanelUnits = Math.ceil((activeQuote.system_size_kw * 1000) / (activeQuote.panel_wattage || 550));
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
@@ -377,6 +414,19 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Notification Banner when Units Updated */}
+              {unitsSaveSuccessMsg && (
+                <div className="no-print p-3 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{unitsSaveSuccessMsg}</span>
+                  </div>
+                  <button onClick={() => setUnitsSaveSuccessMsg('')} className="text-emerald-700 hover:text-emerald-900 cursor-pointer">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
 
               {/* Document Header */}
               <div className="flex items-start justify-between border-b pb-6">
@@ -453,7 +503,70 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                     <tr>
                       <td className="p-2.5 font-bold">Solar PV Modules</td>
                       <td className="p-2.5">{panelSpec}</td>
-                      <td className="p-2.5 text-center">{activeQuote.panel_quantity} Units</td>
+                      <td className="p-2.5 text-center">
+                        {/* Static text for printed PDF */}
+                        <span className="hidden print:inline font-semibold">{activeQuote.panel_quantity} Units</span>
+
+                        {/* Interactive UI on screen (auto-calculated with manual override option) */}
+                        <div className="no-print inline-flex flex-col items-center">
+                          {editingUnitsQuoteId === activeQuote.id ? (
+                            <div className="flex items-center gap-1.5 p-1 bg-amber-50 rounded-lg border border-amber-300 shadow-sm">
+                              <input
+                                type="number"
+                                min="1"
+                                max="999"
+                                value={customUnitsVal}
+                                onChange={(e) => setCustomUnitsVal(e.target.value)}
+                                className="w-16 px-1.5 py-0.5 text-xs text-center font-bold text-slate-900 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-inner"
+                                autoFocus
+                              />
+                              <span className="text-[11px] font-semibold text-slate-600">Units</span>
+                              <button
+                                type="button"
+                                onClick={handleSaveCustomUnits}
+                                disabled={isSavingUnits}
+                                className="px-2 py-0.5 text-[11px] font-bold bg-emerald-600 text-white rounded hover:bg-emerald-500 transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+                              >
+                                {isSavingUnits ? '...' : 'Save'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCustomUnitsVal(autoPanelUnits.toString())}
+                                title={`Reset to formula auto calculation: ${autoPanelUnits} units (${activeQuote.system_size_kw} kW)`}
+                                className="px-1.5 py-0.5 text-[10px] font-medium bg-white text-amber-800 rounded hover:bg-amber-100 border border-amber-300 cursor-pointer"
+                              >
+                                Auto ({autoPanelUnits})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingUnitsQuoteId(null)}
+                                className="p-0.5 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                                title="Cancel"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-slate-900 bg-slate-100/90 px-2 py-0.5 rounded border border-slate-200">
+                                {activeQuote.panel_quantity} Units
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingUnitsQuoteId(activeQuote.id);
+                                  setCustomUnitsVal(activeQuote.panel_quantity.toString());
+                                }}
+                                className="px-1.5 py-0.5 text-[10px] font-medium rounded text-emerald-700 hover:bg-emerald-50 border border-emerald-300/80 transition-colors cursor-pointer flex items-center gap-1"
+                                title="Click to manually edit Solar PV Module Units"
+                              >
+                                <Edit2 className="w-3 h-3 text-emerald-600" />
+                                <span>Edit</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className={`p-2.5 text-right font-medium ${warrantyBreakdown.panels !== '-' ? 'font-semibold text-emerald-700' : 'text-slate-400'}`}>
                         {warrantyBreakdown.panels}
                       </td>

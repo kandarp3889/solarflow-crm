@@ -23,6 +23,7 @@ def calculate_quote(req: QuotationCalculateRequest):
         system_size_kw=req.system_size_kw,
         panel_cost_per_watt=req.panel_cost_per_watt or 28.0,
         panel_wattage=req.panel_wattage or 550,
+        panel_quantity=req.panel_quantity,
         inverter_cost=req.inverter_cost or 45000.0,
         battery_cost=req.battery_cost or 0.0,
         structure_cost=req.structure_cost or 20000.0,
@@ -106,11 +107,24 @@ def create_quotation(
     elif solar_sys and solar_sys.subsidy > 0:
         subsidy_to_use = solar_sys.subsidy
 
-    if base_price_to_use is not None and base_price_to_use > 0:
-        kw = max(0.1, float(system_size_kw))
-        wattage = max(300, int(quote_in.panel_wattage or 550))
-        import math
+    kw = max(0.1, float(system_size_kw))
+    wattage = max(300, int(quote_in.panel_wattage or 550))
+    if (not quote_in.panel_wattage or quote_in.panel_wattage == 550) and solar_panel_name:
+        import re
+        w_match = re.search(r'(\d{3,4})\s*[wW]', solar_panel_name)
+        if w_match:
+            try:
+                wattage = max(300, int(w_match.group(1)))
+            except ValueError:
+                pass
+
+    import math
+    if quote_in.panel_quantity and quote_in.panel_quantity > 0:
+        panel_qty = int(quote_in.panel_quantity)
+    else:
         panel_qty = math.ceil((kw * 1000.0) / wattage)
+
+    if base_price_to_use is not None and base_price_to_use > 0:
         inst_cost = quote_in.installation_cost if quote_in.installation_cost is not None else 0.0
         other_c = quote_in.other_costs if quote_in.other_costs is not None else 0.0
         disc_c = quote_in.discount if quote_in.discount is not None else 0.0
@@ -157,7 +171,8 @@ def create_quotation(
         calc = calculate_solar_quotation(
             system_size_kw=system_size_kw,
             panel_cost_per_watt=28.0,
-            panel_wattage=quote_in.panel_wattage or 550,
+            panel_wattage=wattage,
+            panel_quantity=panel_qty,
             inverter_cost=45000.0,
             battery_cost=60000.0 if quote_in.battery_backup != "None" else 0.0,
             structure_cost=20000.0,

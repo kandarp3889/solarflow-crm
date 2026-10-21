@@ -209,7 +209,7 @@ def create_quotation(
         "monthly_generation_kwh": calc["monthly_generation_kwh"],
         "monthly_savings": calc["monthly_savings"],
         "payback_years": calc["payback_years"],
-        "valid_until": to_ist_naive(quote_in.valid_until) if quote_in.valid_until else (now_ist() + timedelta(days=15))
+        "valid_until": to_ist_naive(quote_in.valid_until) if quote_in.valid_until else (now_ist() + timedelta(days=7))
     })
 
     new_quote = Quotation(

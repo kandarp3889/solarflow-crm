@@ -529,7 +529,6 @@ export const QuotationList: React.FC<QuotationListProps> = ({
               <div className="pt-4 border-t text-[10px] text-slate-500 space-y-1">
                 <p>• Quotation valid for 7 days from issuance. Central subsidy (up to ₹78,000) credited via Direct Benefit Transfer under PM Surya Ghar Yojana.</p>
                 <p>• Net-metering approval, solar meter testing, and DISCOM commissioning handled end-to-end by True Sun Energy with PGVCL/DGVCL/MGVCL/UGVCL.</p>
-                <p>• Rooftop solar financing & 0% / low-interest EMI assistance available through nationalized bank partners.</p>
               </div>
             </div>
           </div>

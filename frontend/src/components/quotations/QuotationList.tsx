@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Percent,
   Layers,
-  X
+  X,
+  Edit3
 } from 'lucide-react';
 import { Quotation, SolarSystem } from '../../types';
 
@@ -82,6 +83,7 @@ export function extractWarrantyBreakdown(warrantyStr?: string) {
 import { api } from '../../services/api';
 import { formatISTDate } from '../../utils/date';
 import { CreateQuotationModal } from './CreateQuotationModal';
+import { EditQuotationModal } from './EditQuotationModal';
 
 interface QuotationListProps {
   onSelectLead: (id: number) => void;
@@ -100,6 +102,8 @@ export const QuotationList: React.FC<QuotationListProps> = ({
   const [activeQuote, setActiveQuote] = useState<Quotation | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isCreateQuoteModalOpen, setIsCreateQuoteModalOpen] = useState(false);
+  const [editingQuote, setEditingQuote] = useState<Quotation | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const fetchQuotes = async () => {
     setLoading(true);
@@ -132,6 +136,11 @@ export const QuotationList: React.FC<QuotationListProps> = ({
   const handlePrintProposal = (q: Quotation) => {
     setActiveQuote(q);
     setIsPrintModalOpen(true);
+  };
+
+  const handleEditQuote = (q: Quotation) => {
+    setEditingQuote(q);
+    setIsEditModalOpen(true);
   };
 
   const handleSendDispatch = async (id: number, channel: 'email' | 'whatsapp') => {
@@ -304,13 +313,23 @@ export const QuotationList: React.FC<QuotationListProps> = ({
 
                 {/* Action Buttons */}
                 <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                  <button
-                    onClick={() => handlePrintProposal(q)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
-                  >
-                    <Printer className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Print PDF</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handlePrintProposal(q)}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Print PDF</span>
+                    </button>
+                    <button
+                      onClick={() => handleEditQuote(q)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition-colors cursor-pointer"
+                      title="Edit Quotation"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+                  </div>
 
                   <div className="flex items-center gap-1.5">
                     <button
@@ -522,6 +541,23 @@ export const QuotationList: React.FC<QuotationListProps> = ({
         isOpen={isCreateQuoteModalOpen}
         onClose={() => setIsCreateQuoteModalOpen(false)}
         onSuccess={() => {
+          fetchQuotes();
+          window.dispatchEvent(new CustomEvent('crm-data-updated'));
+        }}
+        onNavigateToSystems={onNavigateToSystems}
+      />
+
+      {/* Edit Solar Quotation Modal */}
+      <EditQuotationModal
+        isOpen={isEditModalOpen}
+        quotation={editingQuote}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingQuote(null);
+        }}
+        onSuccess={() => {
+          setIsEditModalOpen(false);
+          setEditingQuote(null);
           fetchQuotes();
           window.dispatchEvent(new CustomEvent('crm-data-updated'));
         }}

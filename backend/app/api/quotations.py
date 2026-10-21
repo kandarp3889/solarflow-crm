@@ -288,8 +288,22 @@ def update_quotation(
         raise HTTPException(status_code=404, detail="Quotation not found")
 
     update_data = quote_in.dict(exclude_unset=True)
+    if 'valid_until' in update_data and update_data['valid_until']:
+        update_data['valid_until'] = to_ist_naive(update_data['valid_until'])
+
     for k, v in update_data.items():
         setattr(q, k, v)
+
+    if q.lead_id:
+        act = LeadActivity(
+            company_id=company.id,
+            lead_id=q.lead_id,
+            user_id=current_user.id,
+            activity_type="quotation_updated",
+            title=f"Quotation Updated ({q.quotation_number})",
+            description=f"{q.system_size_kw} kW system updated. Final customer price: ₹{q.final_price:,.0f} (Subsidy: ₹{q.subsidy_amount:,.0f})."
+        )
+        db.add(act)
 
     db.commit()
     db.refresh(q)

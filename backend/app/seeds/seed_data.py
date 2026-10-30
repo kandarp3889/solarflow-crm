@@ -26,7 +26,7 @@ def run_seed():
         email="info.truesunenergy@gmail.com",
         address="1st Floor Office No. 13, Prime Complex, Bypass Chokdi, Mangrol, Gujarat 362225",
         website="https://truesunenergy.in",
-        gstin="24AAACT8921R1Z8",
+        gstin="24EIVPG5500C1ZI",
         subscription_plan="enterprise",
         solar_settings={
             "panel_brands": ["Adani Solar", "Waaree Energies", "Goldi Solar", "Tata Power Solar", "Vikram Solar"],

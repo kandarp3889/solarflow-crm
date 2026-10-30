@@ -421,7 +421,7 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                       1st Floor Office No. 13, Prime Complex, Bypass Chokdi, Mangrol, Gujarat 362225
                     </p>
                     <p className="text-[11px] text-slate-500 font-mono">
-                      GSTIN: 24AAACT8921R1Z8 • Phone: +91 99740 45095 • info.truesunenergy@gmail.com
+                      GSTIN: 24EIVPG5500C1ZI • Phone: +91 99740 45095 • info.truesunenergy@gmail.com
                     </p>
                   </div>
                 </div>

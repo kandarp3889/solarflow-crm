@@ -415,7 +415,7 @@ export const QuotationList: React.FC<QuotationListProps> = ({
                       True Sun Energy
                     </h1>
                     <p className="text-xs font-semibold text-slate-700 mt-0.5">
-                      Complete Solar Solution & Service • MNRE & GUVNL Empanelled Channel Partner
+                      Complete Solar Solution & Service
                     </p>
                     <p className="text-[11px] text-slate-500">
                       1st Floor Office No. 13, Prime Complex, Bypass Chokdi, Mangrol, Gujarat 362225
